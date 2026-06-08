@@ -1,0 +1,2412 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DISKURS · Ads Report</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f0f4f9;
+  --bg2: #ffffff;
+  --bg3: #f5f7fb;
+  --bg4: #eaeff6;
+  --border: rgba(30,80,200,0.10);
+  --border2: rgba(30,80,200,0.18);
+  --text: #0f1c3f;
+  --text2: #4a5a7a;
+  --text3: #8a9ab8;
+  --accent: #1e50c8;
+  --accent2: #1640a8;
+  --green: #1a9e6a;
+  --red: #d63b3b;
+  --amber: #c87c10;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --font: 'DM Sans', sans-serif;
+  --mono: 'DM Mono', monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14px; line-height: 1.6; }
+
+/* Auth */
+.auth-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+.auth-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 16px; padding: 40px; width: 360px; box-shadow: 0 8px 40px rgba(30,80,200,0.10); border-top: 4px solid var(--accent); }
+.auth-logo { font-size: 18px; font-weight: 600; letter-spacing: -0.3px; margin-bottom: 32px; color: var(--text); }
+.auth-logo span { color: var(--accent); }
+.auth-title { font-size: 22px; font-weight: 500; margin-bottom: 8px; }
+.auth-sub { color: var(--text2); font-size: 13px; margin-bottom: 28px; }
+
+/* Forms */
+.field { margin-bottom: 16px; }
+.field label { display: block; font-size: 12px; color: var(--text2); margin-bottom: 6px; font-weight: 500; letter-spacing: 0.3px; text-transform: uppercase; }
+.field input, .field select, .field textarea { width: 100%; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 9px 12px; color: var(--text); font-family: var(--font); font-size: 14px; outline: none; transition: border-color 0.15s; }
+.field input:focus, .field select:focus, .field textarea:focus { border-color: var(--accent); }
+.field select option { background: var(--bg3); }
+.field textarea { resize: vertical; min-height: 80px; }
+
+/* Buttons */
+.btn { display: inline-flex; align-items: center; gap: 7px; padding: 9px 16px; border-radius: var(--radius-sm); font-family: var(--font); font-size: 13px; font-weight: 500; cursor: pointer; border: none; transition: all 0.15s; white-space: nowrap; }
+.btn-primary { background: var(--accent); color: #fff; box-shadow: 0 2px 8px rgba(30,80,200,0.25); }
+.btn-primary:hover { background: var(--accent2); box-shadow: 0 4px 14px rgba(30,80,200,0.35); }
+.btn-ghost { background: transparent; color: var(--text2); border: 1px solid var(--border); }
+.btn-ghost:hover { background: var(--bg3); color: var(--text); border-color: var(--border2); }
+.btn-danger { background: transparent; color: var(--red); border: 1px solid rgba(224,82,82,0.3); }
+.btn-danger:hover { background: rgba(224,82,82,0.1); }
+.btn-full { width: 100%; justify-content: center; padding: 11px; }
+.btn-sm { padding: 5px 10px; font-size: 12px; }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* Layout */
+.app { display: flex; min-height: 100vh; }
+.sidebar { width: 220px; min-width: 220px; background: var(--bg2); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 20px 0; box-shadow: 2px 0 12px rgba(30,80,200,0.06); }
+.sidebar-logo { font-size: 15px; font-weight: 700; padding: 0 20px 24px; color: var(--accent); letter-spacing: -0.3px; }
+.sidebar-logo span { color: var(--text); }
+.sidebar-section { font-size: 10px; font-weight: 600; color: var(--text3); letter-spacing: 1px; text-transform: uppercase; padding: 16px 20px 6px; }
+.nav-item { display: flex; align-items: center; gap: 10px; padding: 8px 20px; color: var(--text2); cursor: pointer; transition: all 0.12s; font-size: 13px; border-left: 2px solid transparent; }
+.nav-item:hover { color: var(--text); background: var(--bg3); }
+.nav-item.active { color: var(--accent); background: rgba(30,80,200,0.07); border-left-color: var(--accent); font-weight: 500; }
+.nav-item svg { opacity: 0.7; flex-shrink: 0; }
+.nav-item.active svg { opacity: 1; }
+.sidebar-bottom { margin-top: auto; padding: 16px 20px; border-top: 1px solid var(--border); }
+.user-info { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.user-avatar { width: 30px; height: 30px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: #fff; flex-shrink: 0; }
+.user-name { font-size: 13px; color: var(--text); font-weight: 500; }
+.user-email { font-size: 11px; color: var(--text3); }
+
+.main { flex: 1; overflow-y: auto; }
+.page { display: none; padding: 32px 36px; max-width: 1100px; }
+.page.active { display: block; }
+.page-header { margin-bottom: 28px; }
+.page-title { font-size: 22px; font-weight: 500; letter-spacing: -0.3px; }
+.page-sub { color: var(--text2); font-size: 13px; margin-top: 4px; }
+
+/* Cards */
+.card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; box-shadow: 0 2px 8px rgba(30,80,200,0.05); }
+.card-title { font-size: 13px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 16px; }
+
+/* Grid */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+.grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+
+/* Metric cards */
+.metric { background: var(--bg2); border-radius: var(--radius-sm); padding: 16px; border: 1px solid var(--border); border-top: 3px solid var(--accent); }
+.metric-label { font-size: 11px; color: var(--text3); font-weight: 500; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 6px; }
+.metric-value { font-size: 26px; font-weight: 500; letter-spacing: -0.5px; }
+.metric-sub { font-size: 12px; color: var(--text3); margin-top: 3px; }
+.metric-up { color: var(--green); }
+.metric-down { color: var(--red); }
+
+/* Table */
+.table-wrap { overflow-x: auto; margin-top: 4px; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { text-align: left; color: var(--text3); font-size: 11px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; padding: 0 12px 10px 0; border-bottom: 1px solid var(--border); white-space: nowrap; }
+td { padding: 11px 12px 11px 0; border-bottom: 1px solid var(--border); vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--bg3); }
+.creative-img { width: 48px; height: 48px; object-fit: cover; border-radius: 6px; background: var(--bg4); flex-shrink: 0; display: block; }
+.creative-img-wrap { width: 48px; height: 48px; border-radius: 6px; background: var(--bg4); display: flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden; }
+.badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
+.badge-green { background: rgba(61,186,126,0.12); color: var(--green); }
+.badge-red { background: rgba(224,82,82,0.12); color: var(--red); }
+.badge-gray { background: var(--bg4); color: var(--text3); }
+.badge-blue { background: rgba(79,127,255,0.12); color: var(--accent); }
+
+/* Report controls */
+.report-controls { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
+.report-controls .field { margin-bottom: 0; }
+.report-controls select { min-width: 200px; }
+
+/* Project selector */
+.project-selector { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 9px 12px; color: var(--text); font-family: var(--font); font-size: 13px; cursor: pointer; min-width: 180px; }
+
+/* Divider */
+.divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+
+/* List items */
+.list-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border); gap: 12px; }
+.list-item:last-child { border-bottom: none; }
+.list-item-info { flex: 1; min-width: 0; }
+.list-item-title { font-size: 14px; font-weight: 500; }
+.list-item-sub { font-size: 12px; color: var(--text2); margin-top: 2px; }
+.list-item-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+/* Tag */
+.tag { display: inline-flex; align-items: center; gap: 4px; background: var(--bg4); border: 1px solid var(--border); border-radius: 4px; padding: 2px 8px; font-size: 12px; color: var(--text2); font-family: var(--mono); }
+
+/* Modal */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 100; align-items: center; justify-content: center; }
+.modal-overlay.open { display: flex; }
+.modal { background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; padding: 28px; width: 480px; max-height: 85vh; overflow-y: auto; }
+.modal-title { font-size: 17px; font-weight: 500; margin-bottom: 20px; }
+.modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 24px; }
+
+/* Alert */
+.alert { padding: 10px 14px; border-radius: var(--radius-sm); font-size: 13px; margin-bottom: 16px; }
+.alert-error { background: rgba(224,82,82,0.1); color: var(--red); border: 1px solid rgba(224,82,82,0.2); }
+.alert-success { background: rgba(61,186,126,0.1); color: var(--green); border: 1px solid rgba(61,186,126,0.2); }
+.alert-info { background: rgba(79,127,255,0.1); color: var(--accent); border: 1px solid rgba(79,127,255,0.2); }
+
+/* Loading */
+.loading { display: flex; align-items: center; justify-content: center; padding: 48px; color: var(--text3); font-size: 13px; gap: 10px; }
+.spinner { width: 18px; height: 18px; border: 2px solid var(--border2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Empty state */
+.empty { text-align: center; padding: 48px 24px; color: var(--text3); }
+.empty-icon { font-size: 32px; margin-bottom: 12px; opacity: 0.4; }
+.empty-title { font-size: 15px; color: var(--text2); margin-bottom: 6px; }
+.empty-sub { font-size: 13px; }
+
+/* Tabs */
+.tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
+.tab { padding: 8px 16px; font-size: 13px; color: var(--text3); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 0.12s; }
+.tab:hover { color: var(--text2); }
+.tab.active { color: var(--text); border-bottom-color: var(--accent); }
+
+/* Section header */
+.section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.section-title { font-size: 15px; font-weight: 500; }
+
+/* Bar chart */
+.bar-chart { display: flex; flex-direction: column; gap: 8px; }
+.bar-row { display: flex; align-items: center; gap: 10px; }
+.bar-label { font-size: 12px; color: var(--text2); width: 120px; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bar-track { flex: 1; height: 6px; background: var(--bg4); border-radius: 3px; overflow: hidden; }
+.bar-fill { height: 100%; background: var(--accent); border-radius: 3px; transition: width 0.4s ease; }
+.bar-fill.green { background: var(--green); }
+.bar-value { font-size: 12px; color: var(--text2); font-family: var(--mono); width: 70px; text-align: right; flex-shrink: 0; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 3px; }
+
+
+
+/* Admin lock */
+.admin-lock { display:flex; align-items:center; gap:8px; padding:10px 14px; background:rgba(30,80,200,0.06); border:1px solid rgba(30,80,200,0.15); border-radius:var(--radius-sm); margin-bottom:16px; font-size:13px; color:var(--text2); cursor:pointer; }
+.admin-lock:hover { background:rgba(30,80,200,0.10); }
+.admin-lock svg { flex-shrink:0; }
+.admin-section { display:none; }
+.admin-section.unlocked { display:block; }
+
+/* Lightbox */
+.lightbox-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.88); z-index:200; align-items:center; justify-content:center; cursor:zoom-out; }
+.lightbox-overlay.open { display:flex; }
+.lightbox-img { max-width:90vw; max-height:88vh; object-fit:contain; border-radius:8px; box-shadow:0 24px 80px rgba(0,0,0,0.6); }
+.lightbox-close { position:absolute; top:20px; right:24px; color:#fff; font-size:28px; cursor:pointer; line-height:1; opacity:0.7; }
+.lightbox-close:hover { opacity:1; }
+.lightbox-name { position:absolute; bottom:24px; left:50%; transform:translateX(-50%); color:rgba(255,255,255,0.7); font-size:13px; text-align:center; max-width:80vw; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.creative-img-wrap { cursor:zoom-in; transition:opacity 0.15s; }
+.creative-img-wrap:hover { opacity:0.85; }
+
+/* Print styles */
+@media print {
+  .sidebar, .report-controls, .btn, .no-print { display: none !important; }
+  .main { overflow: visible; }
+  .page { padding: 20px; max-width: 100%; }
+  body { background: white; }
+  .card { box-shadow: none; border: 1px solid #ddd; }
+  .metric { border-top-color: #1e50c8; }
+  table { font-size: 11px; }
+}
+
+/* Checkbox */
+.checkbox-group { display: flex; flex-direction: column; gap: 10px; }
+.checkbox-item { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.checkbox-item input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+
+/* Token input */
+.token-display { font-family: var(--mono); font-size: 11px; color: var(--text3); background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 12px; word-break: break-all; margin-top: 6px; }
+
+/* Account chips */
+.account-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.account-chip { display: flex; align-items: center; gap: 6px; background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; padding: 5px 10px; font-size: 12px; font-family: var(--mono); }
+.account-chip-remove { cursor: pointer; color: var(--text3); line-height: 1; padding: 1px; }
+.account-chip-remove:hover { color: var(--red); }
+
+.inline-flex { display: inline-flex; align-items: center; gap: 6px; }
+
+/* ─── MOBILE ─────────────────────────────────────────── */
+@media (max-width: 768px) {
+
+  /* Скрываем sidebar, показываем нижнюю навигацию */
+  .sidebar { display: none; }
+  .app { flex-direction: column; }
+  .main { padding-bottom: 70px; }
+  .page { padding: 16px; }
+
+  /* Нижняя навигация */
+  .mobile-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: var(--bg2);
+    border-top: 1px solid var(--border);
+    z-index: 50;
+    padding: 6px 0 env(safe-area-inset-bottom, 6px);
+  }
+  .mobile-nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 6px 4px;
+    color: var(--text3);
+    cursor: pointer;
+    font-size: 10px;
+    font-weight: 500;
+    transition: color 0.12s;
+  }
+  .mobile-nav-item.active { color: var(--accent); }
+  .mobile-nav-item svg { width: 20px; height: 20px; }
+
+  /* Мобильный хедер */
+  .mobile-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 40;
+  }
+  .mobile-header-logo { font-size: 15px; font-weight: 700; color: var(--accent); }
+  .mobile-header-project { font-size: 12px; color: var(--text2); }
+
+  /* Селектор проекта — полная ширина */
+  #projectSelect { width: 100%; margin: 0 0 12px; }
+
+  /* Грид адаптация */
+  .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+
+  /* Метрики — горизонтальный скролл */
+  .metrics-row {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .metrics-row .metric {
+    min-width: 140px;
+    flex-shrink: 0;
+  }
+
+  /* Таблицы — горизонтальный скролл */
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table { min-width: 500px; }
+
+  /* Скрываем менее важные колонки на мобиле */
+  .hide-mobile { display: none !important; }
+
+  /* Карточки */
+  .card { padding: 14px; }
+  .modal { width: calc(100vw - 32px); max-height: 90vh; }
+
+  /* Кнопки */
+  .page-header { flex-direction: column; gap: 12px; }
+  .page-header > div:last-child { width: 100%; justify-content: flex-end; }
+
+  /* TOP-3 */
+  .grid-2 { gap: 12px; }
+
+  /* Фильтры — вертикально */
+  .report-controls { flex-direction: column; align-items: stretch; }
+
+  /* Auth */
+  .auth-card { width: calc(100vw - 32px); padding: 28px 20px; }
+
+  /* Метрика значение меньше */
+  .metric-value { font-size: 22px; }
+}
+
+@media (min-width: 769px) {
+  .mobile-nav { display: none; }
+  .mobile-header { display: none; }
+}
+
+</style>
+</head>
+<body>
+
+<!-- AUTH SCREEN -->
+<div id="authScreen" class="auth-wrap">
+  <div class="auth-card">
+    <div class="auth-logo" style="font-size:20px; font-weight:700; color:var(--accent); letter-spacing:-0.5px">DISKURS<span style="color:var(--text2); font-weight:400"> · Ads</span></div>
+    <div class="auth-title">Добро пожаловать</div>
+    <div class="auth-sub">Войдите чтобы продолжить</div>
+    <div id="authError" class="alert alert-error" style="display:none"></div>
+    <div class="field"><label>Email</label><input type="email" id="authEmail" placeholder="you@diskurs.kz"></div>
+    <div class="field"><label>Пароль</label><input type="password" id="authPassword" placeholder="••••••••"></div>
+    <button class="btn btn-primary btn-full" onclick="login()">Войти</button>
+    <div style="text-align:center; margin-top:14px;">
+      <span style="font-size:12px; color:var(--text3)">Нет аккаунта? </span>
+      <span style="font-size:12px; color:var(--accent); cursor:pointer" onclick="showRegister()">Зарегистрироваться</span>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="appScreen" class="app" style="display:none">
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <div class="sidebar-logo">DISKURS<span> · Ads</span></div>
+
+    <div class="sidebar-section">Проект</div>
+    <select class="project-selector" style="margin: 0 12px; width: calc(100% - 24px)" id="projectSelect" onchange="selectProject(this.value)">
+      <option value="">— Выберите проект —</option>
+    </select>
+
+    <div class="sidebar-section" style="margin-top:16px">Отчёты</div>
+    <div class="nav-item" onclick="showPage('weekly')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      Неделя
+    </div>
+    <div class="nav-item" onclick="showPage('monthly')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v18h18"/><path d="M7 16l4-4 4 4 4-8"/></svg>
+      Месяц
+    </div>
+    <div class="nav-item" onclick="showPage('yearly')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+      Год
+    </div>
+
+    <div class="sidebar-section">Управление</div>
+    <div class="nav-item" onclick="showPage('projects')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+      Проекты
+    </div>
+    <div class="nav-item" onclick="showPage('goals')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm0 6v4l3 3"/></svg>
+      Цели кампаний
+    </div>
+    <div class="nav-item" onclick="showPage('settings')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 2v2m0 16v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M2 12h2m16 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+      Настройки
+    </div>
+    <div class="nav-item" onclick="showPage('help')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      Как пользоваться
+    </div>
+    <div class="nav-item" onclick="showPage('guide')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+      Инструкция CRM
+    </div>
+
+    <div class="sidebar-bottom">
+      <div class="user-info">
+        <div class="user-avatar" id="userAvatar">?</div>
+        <div>
+          <div class="user-name" id="userName">—</div>
+          <div class="user-email" id="userEmail">—</div>
+        </div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="logout()" style="width:100%; justify-content:center">Выйти</button>
+    </div>
+  </nav>
+
+  <!-- MAIN CONTENT -->
+  <main class="main">
+
+    <!-- WEEKLY REPORT -->
+    <div id="page-weekly" class="page">
+      <div class="page-header">
+        <div style="display:flex; align-items:center; justify-content:space-between">
+          <div>
+            <div class="page-title">Отчёт за неделю</div>
+            <div class="page-sub" id="weeklyPeriodLabel">Загрузка...</div>
+          </div>
+          <div style="display:flex; gap:8px" class="no-print">
+            <button class="btn btn-ghost" onclick="loadWeeklyReport()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15"/></svg>
+              Обновить
+            </button>
+            <button class="btn btn-ghost" onclick="printReport()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><path d="M6 14h12v8H6z"/></svg>
+              PDF
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Фильтры и период -->
+      <div class="no-print" style="display:flex; gap:12px; margin-bottom:20px; flex-wrap:wrap; align-items:flex-end">
+        <div>
+          <div style="font-size:11px; color:var(--text3); font-weight:600; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px">Период</div>
+          <div style="display:flex; gap:6px; align-items:center">
+            <select id="weeklyPeriodType" onchange="toggleCustomPeriod('weekly')" style="background:var(--bg3); border:1px solid var(--border); border-radius:var(--radius-sm); padding:8px 10px; color:var(--text); font-family:var(--font); font-size:13px">
+              <option value="week">Прошедшая неделя</option>
+              <option value="custom">Произвольный период</option>
+            </select>
+            <div id="weeklyCustomPeriod" style="display:none; gap:6px; align-items:center">
+              <input type="date" id="weeklyDateFrom" style="background:var(--bg3); border:1px solid var(--border); border-radius:var(--radius-sm); padding:7px 10px; color:var(--text); font-family:var(--font); font-size:13px">
+              <span style="color:var(--text3)">—</span>
+              <input type="date" id="weeklyDateTo" style="background:var(--bg3); border:1px solid var(--border); border-radius:var(--radius-sm); padding:7px 10px; color:var(--text); font-family:var(--font); font-size:13px">
+            </div>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:11px; color:var(--text3); font-weight:600; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px">Кампания</div>
+          <select id="filterCampaign" style="background:var(--bg3); border:1px solid var(--border); border-radius:var(--radius-sm); padding:8px 10px; color:var(--text); font-family:var(--font); font-size:13px; min-width:180px" onchange="applyFilters()">
+            <option value="">Все кампании</option>
+          </select>
+        </div>
+        <div>
+          <div style="font-size:11px; color:var(--text3); font-weight:600; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px">Группа объявлений</div>
+          <select id="filterAdset" style="background:var(--bg3); border:1px solid var(--border); border-radius:var(--radius-sm); padding:8px 10px; color:var(--text); font-family:var(--font); font-size:13px; min-width:180px" onchange="applyFilters()">
+            <option value="">Все группы</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="weeklyContent">
+        <div class="empty">
+          <div class="empty-icon">📊</div>
+          <div class="empty-title">Выберите проект</div>
+          <div class="empty-sub">Выберите проект в боковом меню чтобы загрузить данные</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MONTHLY REPORT -->
+    <div id="page-monthly" class="page">
+      <div class="page-header">
+        <div style="display:flex; align-items:center; justify-content:space-between">
+          <div>
+            <div class="page-title">Статистика за месяц</div>
+            <div class="page-sub" id="monthlyPeriodLabel">По кампаниям, разбивка по дням</div>
+          </div>
+          <div style="display:flex; gap:8px" class="no-print">
+            <select id="monthlyMonthSelect" class="field" style="margin:0; padding:8px 12px; background:var(--bg3); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:var(--font)"></select>
+            <button class="btn btn-ghost" onclick="loadMonthlyReport()">Загрузить</button>
+            <button class="btn btn-ghost" onclick="printReport()">PDF</button>
+          </div>
+        </div>
+      </div>
+      <div id="monthlyContent">
+        <div class="empty"><div class="empty-icon">📈</div><div class="empty-title">Выберите проект и месяц</div></div>
+      </div>
+    </div>
+
+    <!-- YEARLY REPORT -->
+    <div id="page-yearly" class="page">
+      <div class="page-header">
+        <div style="display:flex; align-items:center; justify-content:space-between">
+          <div>
+            <div class="page-title">Статистика за год</div>
+            <div class="page-sub">По кампаниям, разбивка по месяцам</div>
+          </div>
+          <div style="display:flex; gap:8px" class="no-print">
+            <button class="btn btn-ghost" onclick="loadYearlyReport()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15"/></svg>
+              Загрузить
+            </button>
+            <button class="btn btn-ghost" onclick="printReport()">PDF</button>
+          </div>
+        </div>
+      </div>
+      <div id="yearlyContent">
+        <div class="empty"><div class="empty-icon">📅</div><div class="empty-title">Выберите проект</div></div>
+      </div>
+    </div>
+
+    <!-- PROJECTS -->
+    <div id="page-projects" class="page">
+      <div class="page-header">
+        <div style="display:flex; align-items:center; justify-content:space-between">
+          <div>
+            <div class="page-title">Проекты</div>
+            <div class="page-sub">Клиенты, рекламные кабинеты, шаблоны отчётов</div>
+          </div>
+          <button class="btn btn-primary" onclick="openModal('projectModal')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+            Новый проект
+          </button>
+        </div>
+      </div>
+      <div id="projectsList"></div>
+    </div>
+
+    <!-- GOALS -->
+    <div id="page-goals" class="page">
+      <div class="page-header">
+        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px">
+          <div>
+            <div class="page-title">Цели кампаний</div>
+            <div class="page-sub">Укажите тип результата для каждой кампании</div>
+          </div>
+          <div style="display:flex; gap:8px" class="no-print">
+            <button class="btn btn-ghost" onclick="loadCampaigns()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15"/></svg>
+              Загрузить кампании
+            </button>
+            <button class="btn btn-primary" onclick="saveGoals()">Сохранить</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Выбор проекта для целей -->
+      <div class="card" style="margin-bottom:16px; padding:14px">
+        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap">
+          <div style="font-size:13px; font-weight:500; color:var(--text2); white-space:nowrap">Проект:</div>
+          <select id="goalsProjectSelect" onchange="onGoalsProjectChange(this.value)"
+            style="background:var(--bg3); border:1px solid var(--border); border-radius:var(--radius-sm); padding:8px 12px; color:var(--text); font-family:var(--font); font-size:13px; min-width:220px; flex:1; max-width:360px">
+            <option value="">— Выберите проект —</option>
+          </select>
+          <div style="font-size:12px; color:var(--text3)" id="goalsProjectHint">Выберите проект чтобы увидеть его кампании</div>
+        </div>
+      </div>
+
+      <!-- Массовое редактирование -->
+      <div id="goalsToolbar" style="display:none; margin-bottom:16px">
+        <div class="card" style="padding:14px">
+          <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap">
+            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13px; font-weight:500">
+              <input type="checkbox" id="selectAllCampaigns" onchange="toggleSelectAll(this.checked)" style="width:16px; height:16px; accent-color:var(--accent)">
+              Выбрать все
+            </label>
+            <div style="width:1px; height:20px; background:var(--border)"></div>
+            <span style="font-size:13px; color:var(--text2)" id="selectedCount">0 выбрано</span>
+            <div style="width:1px; height:20px; background:var(--border)"></div>
+            <span style="font-size:13px; color:var(--text2)">Задать выбранным:</span>
+            <select id="bulkGoalType" style="background:var(--bg3); border:1px solid var(--border); border-radius:var(--radius-sm); padding:7px 10px; color:var(--text); font-family:var(--font); font-size:13px">
+              <option value="">— выберите тип —</option>
+              ${GOAL_TYPES.map(g => `<option value="${g.value}">${g.label}</option>`).join('')}
+            </select>
+            <button class="btn btn-primary btn-sm" onclick="applyBulkGoal()">Применить</button>
+            <div style="width:1px; height:20px; background:var(--border)"></div>
+            <span style="font-size:12px; color:var(--text3)">Фильтр по статусу:</span>
+            <select id="goalsStatusFilter" onchange="filterGoalsByStatus()" style="background:var(--bg3); border:1px solid var(--border); border-radius:var(--radius-sm); padding:7px 10px; color:var(--text); font-family:var(--font); font-size:12px">
+              <option value="">Все кампании</option>
+              <option value="ACTIVE">Только активные</option>
+              <option value="PAUSED">Только на паузе</option>
+              <option value="unset">Без цели</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="alert alert-info" id="goalsInfo">Выберите проект в боковом меню и нажмите «Обновить кампании».</div>
+      <div id="goalsList">
+        <div class="empty"><div class="empty-icon">🎯</div><div class="empty-title">Выберите проект</div></div>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div id="page-settings" class="page">
+      <div class="page-header">
+        <div class="page-title">Настройки</div>
+        <div class="page-sub">Токен Facebook, аккаунты, параметры приложения</div>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:20px; max-width:600px">
+
+        <!-- Admin lock -->
+        <div id="adminLockBtn" class="admin-lock" onclick="unlockAdmin()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+          Раздел администратора — нажмите чтобы войти
+        </div>
+
+        <div id="adminSection" class="admin-section">
+          <div class="card">
+            <div class="card-title">Facebook Access Token</div>
+            <div style="font-size:13px; color:var(--text2); margin-bottom:12px">Токен действует ~60 дней. Получить новый можно в <a href="https://developers.facebook.com/tools/explorer/" target="_blank" style="color:var(--accent)">Graph API Explorer</a>. Нужные права: ads_read, ads_management, business_management, instagram_basic.</div>
+            <div id="tokenDisplay" class="token-display">Токен не задан</div>
+            <div style="margin-top:12px; display:flex; gap:8px">
+              <button class="btn btn-ghost" onclick="openModal('tokenModal')">Обновить токен</button>
+              <span id="tokenStatus" class="badge badge-gray" style="align-self:center">—</span>
+            </div>
+          </div>
+
+          <div class="card" style="margin-top:16px">
+            <div class="card-title">Пароль администратора</div>
+            <div style="font-size:13px; color:var(--text2); margin-bottom:12px">Пароль для доступа к этому разделу. Задаётся один раз.</div>
+            <div style="display:flex; gap:8px">
+              <input type="password" id="newAdminPass" placeholder="Новый пароль" style="flex:1; background:var(--bg3); border:1px solid var(--border); border-radius:var(--radius-sm); padding:9px 12px; color:var(--text); font-family:var(--font)">
+              <button class="btn btn-primary" onclick="saveAdminPassword()">Сохранить</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">API Version</div>
+          <div class="field" style="margin:0">
+            <select id="apiVersionSelect" onchange="saveSetting('api_version', this.value)">
+              <option value="v23.0">v23.0 (текущая)</option>
+              <option value="v22.0">v22.0</option>
+              <option value="v21.0">v21.0</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Период выгрузки данных</div>
+          <div style="font-size:13px; color:var(--text2); margin-bottom:12px">Начало периода для выгрузки статистики (год). Более ранняя дата = дольше загрузка.</div>
+          <div class="field" style="margin:0">
+            <select id="dataStartSelect" onchange="saveSetting('data_start', this.value)">
+              <option value="2026-01-01">С января 2026</option>
+              <option value="2025-01-01">С января 2025</option>
+              <option value="2025-07-01">С июля 2025</option>
+            </select>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+
+
+    <!-- HELP PAGE -->
+    <div id="page-help" class="page">
+      <div class="page-header">
+        <div class="page-title">Как пользоваться приложением</div>
+        <div class="page-sub">Полный справочник — от первого входа до готового отчёта</div>
+      </div>
+
+      <div style="max-width:720px">
+
+        <!-- Quick start -->
+        <div class="card" style="margin-bottom:20px; border-left:4px solid var(--accent)">
+          <div style="font-size:15px; font-weight:600; margin-bottom:12px">⚡ Быстрый старт — 5 шагов</div>
+          <div style="display:flex; flex-direction:column; gap:8px">
+            ${[
+              ['Войдите', 'Введите email и пароль на странице входа. Если аккаунта нет — нажмите «Зарегистрироваться».'],
+              ['Создайте проект', 'Перейдите в раздел «Проекты» → «Новый проект». Укажите название клиента и добавьте ID рекламных кабинетов.'],
+              ['Выберите проект', 'В боковом меню сверху есть выпадающий список — выберите нужный проект.'],
+              ['Задайте цели кампаний', 'Перейдите в «Цели кампаний», загрузите список и укажите тип результата для каждой кампании.'],
+              ['Откройте отчёт', 'Перейдите в раздел «Неделя» и нажмите «Обновить». Данные загрузятся за 10-30 секунд.']
+            ].map(([t,d], i) => `
+            <div style="display:flex; gap:12px; align-items:flex-start; padding:10px; background:var(--bg3); border-radius:8px">
+              <div style="width:24px; height:24px; border-radius:50%; background:var(--accent); color:#fff; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; flex-shrink:0">${i+1}</div>
+              <div><div style="font-weight:500; font-size:13px; margin-bottom:2px">${t}</div><div style="font-size:13px; color:var(--text2)">${d}</div></div>
+            </div>`).join('')}
+          </div>
+        </div>
+
+        <!-- Sections -->
+        <div style="font-size:16px; font-weight:600; margin-bottom:16px">Разделы приложения</div>
+
+        <!-- Неделя -->
+        <div class="card" style="margin-bottom:12px">
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+            <div style="font-size:15px; font-weight:600">Неделя</div>
+          </div>
+          <p style="color:var(--text2); font-size:13px; line-height:1.7; margin-bottom:12px">Главный рабочий раздел. Показывает данные за прошедшие 7 дней — сколько потрачено, сколько лидов получено и по какой цене.</p>
+          <div style="display:flex; flex-direction:column; gap:8px">
+            <div style="padding:10px 14px; background:var(--bg3); border-radius:6px; font-size:13px">
+              <b>Период</b> — по умолчанию прошедшая неделя. Можно выбрать «Произвольный период» и задать любые даты.
+            </div>
+            <div style="padding:10px 14px; background:var(--bg3); border-radius:6px; font-size:13px">
+              <b>Фильтры</b> — можно отфильтровать данные по конкретной кампании или группе объявлений.
+            </div>
+            <div style="padding:10px 14px; background:var(--bg3); border-radius:6px; font-size:13px">
+              <b>Сравнение</b> — рядом с цифрами показывается изменение в % относительно предыдущего такого же периода. Зелёный — улучшение, красный — ухудшение.
+            </div>
+            <div style="padding:10px 14px; background:var(--bg3); border-radius:6px; font-size:13px">
+              <b>Топ-3 креатива</b> — лучшие объявления по количеству результатов и по самой низкой цене за лид.
+            </div>
+            <div style="padding:10px 14px; background:var(--bg3); border-radius:6px; font-size:13px">
+              <b>Картинки</b> — нажмите на любое изображение чтобы увеличить его.
+            </div>
+            <div style="padding:10px 14px; background:var(--bg3); border-radius:6px; font-size:13px">
+              <b>PDF</b> — кнопка «PDF» в правом верхнем углу. Можно выбрать какие разделы включить в отчёт для клиента.
+            </div>
+          </div>
+        </div>
+
+        <!-- Месяц -->
+        <div class="card" style="margin-bottom:12px">
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 16l4-4 4 4 4-8"/></svg>
+            <div style="font-size:15px; font-weight:600">Месяц</div>
+          </div>
+          <p style="color:var(--text2); font-size:13px; line-height:1.7">Статистика по каждой кампании с разбивкой по дням. Удобно чтобы видеть динамику — в какие дни было больше лидов, когда росли затраты. Выберите нужный месяц из списка и нажмите «Загрузить».</p>
+        </div>
+
+        <!-- Год -->
+        <div class="card" style="margin-bottom:12px">
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+            <div style="font-size:15px; font-weight:600">Год</div>
+          </div>
+          <p style="color:var(--text2); font-size:13px; line-height:1.7">Сводная таблица по кампаниям с разбивкой по месяцам с начала года. Видно сколько потрачено в каждом месяце по каждой кампании — удобно для квартальных отчётов и планирования бюджета.</p>
+        </div>
+
+        <!-- Проекты -->
+        <div class="card" style="margin-bottom:12px">
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+            <div style="font-size:15px; font-weight:600">Проекты</div>
+          </div>
+          <p style="color:var(--text2); font-size:13px; line-height:1.7; margin-bottom:10px">Каждый проект — это один клиент. У одного клиента может быть несколько рекламных кабинетов — данные из них суммируются.</p>
+          <div style="display:flex; flex-direction:column; gap:6px">
+            <div style="padding:10px 14px; background:var(--bg3); border-radius:6px; font-size:13px"><b>Название</b> — например «Yves Ponroy» или «Sante Group»</div>
+            <div style="padding:10px 14px; background:var(--bg3); border-radius:6px; font-size:13px"><b>Рекламные кабинеты</b> — ID вида act_XXXXXXXXX. Можно добавить несколько.</div>
+            <div style="padding:10px 14px; background:var(--bg3); border-radius:6px; font-size:13px"><b>Сквозная аналитика</b> — подключается если у клиента есть CRM. Необязательно.</div>
+          </div>
+        </div>
+
+        <!-- Цели кампаний -->
+        <div class="card" style="margin-bottom:12px">
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm0 6v4l3 3"/></svg>
+            <div style="font-size:15px; font-weight:600">Цели кампаний</div>
+          </div>
+          <p style="color:var(--text2); font-size:13px; line-height:1.7; margin-bottom:10px">Очень важный раздел. Здесь вы говорите приложению что считать результатом в каждой кампании.</p>
+          <div style="background:rgba(232,163,48,0.1); border:1px solid rgba(232,163,48,0.3); border-radius:8px; padding:12px; font-size:13px; color:var(--text2); margin-bottom:10px">
+            ⚠️ Если цели не заданы — в отчёте будет 0 результатов по всем кампаниям. Обязательно заполните этот раздел для каждого нового проекта.
+          </div>
+          <div style="display:flex; flex-direction:column; gap:6px">
+            <div style="padding:10px 14px; background:var(--bg3); border-radius:6px; font-size:13px"><b>Переписки</b> — реклама на WhatsApp или Messenger. Считаются начатые диалоги.</div>
+            <div style="padding:10px 14px; background:var(--bg3); border-radius:6px; font-size:13px"><b>Лид-форма</b> — реклама с формой заявки внутри Facebook. Считаются заполненные формы.</div>
+            <div style="padding:10px 14px; background:var(--bg3); border-radius:6px; font-size:13px"><b>Пиксельное событие</b> — реклама на сайт с пикселем. Считаются события Lead на сайте.</div>
+            <div style="padding:10px 14px; background:var(--bg3); border-radius:6px; font-size:13px"><b>Охват / Просмотры</b> — имиджевая реклама. Лиды не считаются, показываются только затраты и показы.</div>
+          </div>
+        </div>
+
+        <!-- Настройки -->
+        <div class="card" style="margin-bottom:20px">
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v2m0 16v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M2 12h2m16 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+            <div style="font-size:15px; font-weight:600">Настройки</div>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:6px">
+            <div style="padding:10px 14px; background:var(--bg3); border-radius:6px; font-size:13px"><b>Токен Facebook</b> — доступен только администратору. Нужно обновлять раз в ~60 дней. Когда токен истечёт — отчёты перестанут загружаться.</div>
+            <div style="padding:10px 14px; background:var(--bg3); border-radius:6px; font-size:13px"><b>API Version</b> — версия API Facebook. Не меняйте без необходимости.</div>
+          </div>
+        </div>
+
+        <!-- FAQ -->
+        <div style="font-size:16px; font-weight:600; margin-bottom:16px">Частые вопросы</div>
+
+        <div style="display:flex; flex-direction:column; gap:8px">
+          ${[
+            ['Отчёт не загружается', 'Скорее всего истёк токен Facebook. Попросите администратора обновить его в разделе «Настройки».'],
+            ['Результатов 0, хотя лиды были', 'Не заданы цели кампаний. Перейдите в «Цели кампаний» и укажите тип результата для каждой кампании.'],
+            ['Нет изображений у некоторых объявлений', 'Изображения подгружаются из отдельного справочника. Попросите таргетолога запустить обновление справочника креативов.'],
+            ['Данные отличаются от Ads Manager', 'Небольшие расхождения возможны из-за разницы часовых поясов. Если расхождение большое — проверьте что выбраны правильные кабинеты в настройках проекта.'],
+            ['Как добавить нового пользователя', 'Новый сотрудник должен сам зарегистрироваться по ссылке на приложение. Каждый пользователь работает со своими проектами.'],
+            ['Как скачать отчёт для клиента', 'Нажмите кнопку «PDF» в верхнем правом углу на странице отчёта. Выберите нужные разделы и нажмите «Печать / PDF». В диалоге печати выберите «Сохранить как PDF».'],
+          ].map(([q, a]) => `
+          <div class="card" style="padding:14px">
+            <div style="font-weight:500; font-size:13px; margin-bottom:5px">${q}</div>
+            <div style="font-size:13px; color:var(--text2); line-height:1.6">${a}</div>
+          </div>`).join('')}
+        </div>
+
+      </div>
+    </div>
+
+    <!-- GUIDE PAGE -->
+    <div id="page-guide" class="page">
+      <div class="page-header">
+        <div class="page-title">Инструкция по подключению CRM</div>
+        <div class="page-sub">Пошаговое руководство — без технических знаний</div>
+      </div>
+
+      <div style="max-width:720px">
+
+        <!-- Intro -->
+        <div class="card" style="margin-bottom:20px; border-left:4px solid var(--accent)">
+          <div style="font-size:15px; font-weight:500; margin-bottom:8px">Зачем это нужно?</div>
+          <p style="color:var(--text2); font-size:14px; line-height:1.7">
+            Когда реклама работает на переписки или заявки — Facebook считает все входящие обращения. Но не все они реально качественные. Подключив CRM, вы увидите сколько из этих обращений стали <b>квалифицированными лидами</b> — то есть людьми, которые действительно заинтересованы в покупке. Это позволяет оценивать рекламу честно, а не по количеству кликов.
+          </p>
+        </div>
+
+        <!-- Step 1 -->
+        <div class="card" style="margin-bottom:16px">
+          <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px">
+            <div style="width:32px; height:32px; border-radius:50%; background:var(--accent); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px; flex-shrink:0">1</div>
+            <div style="font-size:16px; font-weight:500">Убедитесь что UTM-метки настроены правильно</div>
+          </div>
+          <p style="color:var(--text2); font-size:14px; line-height:1.7; margin-bottom:12px">
+            UTM-метки — это специальные пометки в ссылках, которые помогают понять откуда пришёл клиент. Без них невозможно связать данные из рекламы с данными из CRM.
+          </p>
+          <div style="background:var(--bg3); border-radius:8px; padding:16px; margin-bottom:12px">
+            <div style="font-size:12px; font-weight:600; color:var(--text3); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:10px">В рекламном кабинете Facebook должны быть заданы:</div>
+            <div style="display:flex; flex-direction:column; gap:8px">
+              <div style="display:flex; gap:10px; align-items:flex-start">
+                <span style="background:var(--accent); color:#fff; border-radius:4px; padding:1px 7px; font-size:11px; font-weight:600; flex-shrink:0; margin-top:2px">utm_source</span>
+                <span style="font-size:13px; color:var(--text2)">Всегда пишите <code style="background:var(--bg4); padding:1px 5px; border-radius:3px; font-size:12px">fb</code> — это означает что клиент пришёл из Facebook</span>
+              </div>
+              <div style="display:flex; gap:10px; align-items:flex-start">
+                <span style="background:var(--accent); color:#fff; border-radius:4px; padding:1px 7px; font-size:11px; font-weight:600; flex-shrink:0; margin-top:2px">utm_campaign</span>
+                <span style="font-size:13px; color:var(--text2)">Используйте <code style="background:var(--bg4); padding:1px 5px; border-radius:3px; font-size:12px">&#123;&#123;campaign.name&#125;&#125;</code> — Facebook сам подставит название кампании</span>
+              </div>
+              <div style="display:flex; gap:10px; align-items:flex-start">
+                <span style="background:var(--accent); color:#fff; border-radius:4px; padding:1px 7px; font-size:11px; font-weight:600; flex-shrink:0; margin-top:2px">utm_content</span>
+                <span style="font-size:13px; color:var(--text2)">Используйте <code style="background:var(--bg4); padding:1px 5px; border-radius:3px; font-size:12px">&#123;&#123;adset.name&#125;&#125;_&#123;&#123;ad.name&#125;&#125;</code> — подставится группа и объявление</span>
+              </div>
+            </div>
+          </div>
+          <div style="background:rgba(30,80,200,0.06); border:1px solid rgba(30,80,200,0.15); border-radius:8px; padding:12px; font-size:13px; color:var(--text2)">
+            💡 Проверить можно так: зайдите в Битрикс24, откройте любую сделку которая пришла с рекламы, и посмотрите заполнено ли поле UTM Source. Если там написано <b>fb</b> — всё настроено правильно.
+          </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="card" style="margin-bottom:16px">
+          <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px">
+            <div style="width:32px; height:32px; border-radius:50%; background:var(--accent); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px; flex-shrink:0">2</div>
+            <div style="font-size:16px; font-weight:500">Выгрузите данные из Битрикс24 в Google Таблицу</div>
+          </div>
+          <p style="color:var(--text2); font-size:14px; line-height:1.7; margin-bottom:12px">
+            Нам нужна таблица со сделками из Битрикс24. В ней должны быть колонки: дата создания, UTM-метки и статус/квалификация лида. Это делается один раз — потом таблица обновляется автоматически.
+          </p>
+          <div style="display:flex; flex-direction:column; gap:10px">
+            <div style="display:flex; gap:12px; align-items:flex-start; padding:12px; background:var(--bg3); border-radius:8px">
+              <div style="width:24px; height:24px; border-radius:50%; background:var(--bg4); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; color:var(--text2); flex-shrink:0">а</div>
+              <div style="font-size:13px; color:var(--text2); line-height:1.6">Попросите разработчика или интегратора Битрикс24 настроить экспорт сделок в Google Таблицу. Им нужно передать: нужные поля (дата, UTM Source, UTM Campaign, UTM Content, стадия, квалификация), формат выгрузки — Google Sheets, частота — ежедневно.</div>
+            </div>
+            <div style="display:flex; gap:12px; align-items:flex-start; padding:12px; background:var(--bg3); border-radius:8px">
+              <div style="width:24px; height:24px; border-radius:50%; background:var(--bg4); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; color:var(--text2); flex-shrink:0">б</div>
+              <div style="font-size:13px; color:var(--text2); line-height:1.6">Если Битрикс настраивали вы сами — выгрузку можно сделать через раздел <b>CRM → Сделки → Экспорт</b>, или через встроенный отчёт с сохранением в Google Sheets.</div>
+            </div>
+            <div style="display:flex; gap:12px; align-items:flex-start; padding:12px; background:var(--bg3); border-radius:8px">
+              <div style="width:24px; height:24px; border-radius:50%; background:var(--bg4); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; color:var(--text2); flex-shrink:0">в</div>
+              <div style="font-size:13px; color:var(--text2); line-height:1.6">В эту же таблицу нужно добавить лист с данными Facebook — обычно он уже есть если вы используете нашу систему выгрузки.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="card" style="margin-bottom:16px">
+          <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px">
+            <div style="width:32px; height:32px; border-radius:50%; background:var(--accent); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px; flex-shrink:0">3</div>
+            <div style="font-size:16px; font-weight:500">Настройте проект в приложении</div>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:10px">
+            <div style="display:flex; gap:12px; align-items:flex-start; padding:12px; background:var(--bg3); border-radius:8px">
+              <div style="width:24px; height:24px; border-radius:50%; background:var(--bg4); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; color:var(--text2); flex-shrink:0">1</div>
+              <div style="font-size:13px; color:var(--text2); line-height:1.6">Перейдите в раздел <b>Проекты</b> и откройте нужный проект (или создайте новый).</div>
+            </div>
+            <div style="display:flex; gap:12px; align-items:flex-start; padding:12px; background:var(--bg3); border-radius:8px">
+              <div style="width:24px; height:24px; border-radius:50%; background:var(--bg4); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; color:var(--text2); flex-shrink:0">2</div>
+              <div style="font-size:13px; color:var(--text2); line-height:1.6">В разделе <b>Сквозная аналитика</b> выберите CRM — Битрикс24 или AmoCRM.</div>
+            </div>
+            <div style="display:flex; gap:12px; align-items:flex-start; padding:12px; background:var(--bg3); border-radius:8px">
+              <div style="width:24px; height:24px; border-radius:50%; background:var(--bg4); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; color:var(--text2); flex-shrink:0">3</div>
+              <div style="font-size:13px; color:var(--text2); line-height:1.6">Введите <b>ID Google таблицы</b>. Это длинный код в адресе таблицы — между <code style="background:var(--bg4); padding:1px 5px; border-radius:3px">/d/</code> и <code style="background:var(--bg4); padding:1px 5px; border-radius:3px">/edit</code>. Например: <code style="background:var(--bg4); padding:1px 5px; border-radius:3px; font-size:11px">1qgsq8cdsWuVDKP3qjbJN0e7Uqcid...</code></div>
+            </div>
+            <div style="display:flex; gap:12px; align-items:flex-start; padding:12px; background:var(--bg3); border-radius:8px">
+              <div style="width:24px; height:24px; border-radius:50%; background:var(--bg4); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; color:var(--text2); flex-shrink:0">4</div>
+              <div style="font-size:13px; color:var(--text2); line-height:1.6">Укажите название листов — точно как в таблице (регистр важен). Например: <b>Bitrix</b> и <b>Facebook 2025</b>.</div>
+            </div>
+            <div style="display:flex; gap:12px; align-items:flex-start; padding:12px; background:var(--bg3); border-radius:8px">
+              <div style="width:24px; height:24px; border-radius:50%; background:var(--bg4); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; color:var(--text2); flex-shrink:0">5</div>
+              <div style="font-size:13px; color:var(--text2); line-height:1.6">Укажите <b>метод квалификации</b> и значения. Если в колонке "Квалификация" у хороших лидов написано <b>BBB</b> — выберите "По значению" и впишите BBB. Если используете систему ABCD — выберите соответствующий пункт.</div>
+            </div>
+            <div style="display:flex; gap:12px; align-items:flex-start; padding:12px; background:var(--bg3); border-radius:8px">
+              <div style="width:24px; height:24px; border-radius:50%; background:var(--bg4); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; color:var(--text2); flex-shrink:0">6</div>
+              <div style="font-size:13px; color:var(--text2); line-height:1.6">Нажмите <b>Сохранить</b>. Появится окно с инструкцией — скопируйте код из него и передайте таргетологу или разработчику.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 4 -->
+        <div class="card" style="margin-bottom:16px">
+          <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px">
+            <div style="width:32px; height:32px; border-radius:50%; background:var(--accent); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px; flex-shrink:0">4</div>
+            <div style="font-size:16px; font-weight:500">Запустите синхронизацию (делает таргетолог)</div>
+          </div>
+          <p style="color:var(--text2); font-size:14px; line-height:1.7; margin-bottom:12px">
+            Этот шаг делает таргетолог или человек который настраивал выгрузку данных. Если вы боитесь кода — просто передайте ему эту инструкцию.
+          </p>
+          <div style="display:flex; flex-direction:column; gap:10px">
+            <div style="display:flex; gap:12px; align-items:flex-start; padding:12px; background:var(--bg3); border-radius:8px">
+              <div style="width:24px; height:24px; border-radius:50%; background:var(--bg4); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; color:var(--text2); flex-shrink:0">1</div>
+              <div style="font-size:13px; color:var(--text2); line-height:1.6">Откройте Google Таблицу со сквозной аналитикой → меню <b>Расширения → Apps Script</b>.</div>
+            </div>
+            <div style="display:flex; gap:12px; align-items:flex-start; padding:12px; background:var(--bg3); border-radius:8px">
+              <div style="width:24px; height:24px; border-radius:50%; background:var(--bg4); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; color:var(--text2); flex-shrink:0">2</div>
+              <div style="font-size:13px; color:var(--text2); line-height:1.6">Нажмите <b>+</b> рядом с "Файлы" → создайте файл с названием <b>crm_sync</b>.</div>
+            </div>
+            <div style="display:flex; gap:12px; align-items:flex-start; padding:12px; background:var(--bg3); border-radius:8px">
+              <div style="width:24px; height:24px; border-radius:50%; background:var(--bg4); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; color:var(--text2); flex-shrink:0">3</div>
+              <div style="font-size:13px; color:var(--text2); line-height:1.6">Вставьте код из файла <b>crm_sync.gs</b> и код который появился после сохранения проекта.</div>
+            </div>
+            <div style="display:flex; gap:12px; align-items:flex-start; padding:12px; background:var(--bg3); border-radius:8px">
+              <div style="width:24px; height:24px; border-radius:50%; background:var(--bg4); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; color:var(--text2); flex-shrink:0">4</div>
+              <div style="font-size:13px; color:var(--text2); line-height:1.6">Выберите функцию <b>RUN_SYNC_CRM</b> и нажмите кнопку ▶ Запустить. При первом запуске Google попросит разрешения — нажмите "Разрешить".</div>
+            </div>
+            <div style="display:flex; gap:12px; align-items:flex-start; padding:12px; background:var(--bg3); border-radius:8px">
+              <div style="width:24px; height:24px; border-radius:50%; background:var(--bg4); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; color:var(--text2); flex-shrink:0">5</div>
+              <div style="font-size:13px; color:var(--text2); line-height:1.6">Настройте автозапуск: <b>Триггеры (значок часов)</b> → Добавить триггер → функция RUN_SYNC_CRM → Ежедневно → 06:00. После этого данные будут обновляться каждое утро автоматически.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Result -->
+        <div class="card" style="border-left:4px solid var(--green)">
+          <div style="font-size:15px; font-weight:500; margin-bottom:8px; color:var(--green)">✓ Готово — что вы увидите в отчёте</div>
+          <p style="color:var(--text2); font-size:14px; line-height:1.7; margin-bottom:12px">
+            После синхронизации в таблице креативов появятся три новые колонки:
+          </p>
+          <div style="display:flex; gap:12px; flex-wrap:wrap">
+            <div style="flex:1; min-width:160px; background:var(--bg3); border-radius:8px; padding:14px; text-align:center">
+              <div style="font-size:22px; font-weight:600; color:var(--green)">14</div>
+              <div style="font-size:12px; color:var(--text3); margin-top:4px">Квал. лиды</div>
+              <div style="font-size:11px; color:var(--text3)">из CRM</div>
+            </div>
+            <div style="flex:1; min-width:160px; background:var(--bg3); border-radius:8px; padding:14px; text-align:center">
+              <div style="font-size:22px; font-weight:600; color:var(--accent)">42%</div>
+              <div style="font-size:12px; color:var(--text3); margin-top:4px">% квала</div>
+              <div style="font-size:11px; color:var(--text3)">от всех лидов</div>
+            </div>
+            <div style="flex:1; min-width:160px; background:var(--bg3); border-radius:8px; padding:14px; text-align:center">
+              <div style="font-size:22px; font-weight:600; color:var(--text)">$4.8</div>
+              <div style="font-size:12px; color:var(--text3); margin-top:4px">CPL квал.</div>
+              <div style="font-size:11px; color:var(--text3)">цена за квал. лид</div>
+            </div>
+          </div>
+          <p style="color:var(--text2); font-size:13px; line-height:1.7; margin-top:12px">
+            Если для проекта нет CRM-данных — эти колонки просто не показываются. Никаких лишних пустых колонок.
+          </p>
+        </div>
+
+        <!-- FAQ -->
+        <div style="margin-top:24px">
+          <div style="font-size:16px; font-weight:500; margin-bottom:16px">Частые вопросы</div>
+
+          <div class="card" style="margin-bottom:10px; padding:16px">
+            <div style="font-weight:500; margin-bottom:6px">Данные в отчёте не совпадают с тем что я вижу в Битрикс</div>
+            <div style="font-size:13px; color:var(--text2); line-height:1.6">Скорее всего не все сделки имеют UTM-метки. Это происходит когда клиент написал напрямую (не по рекламной ссылке), или когда UTM не были настроены в момент запуска рекламы. Это нормально — в отчёте показываются только те лиды которые пришли с рекламы.</div>
+          </div>
+
+          <div class="card" style="margin-bottom:10px; padding:16px">
+            <div style="font-weight:500; margin-bottom:6px">Когда обновляются данные?</div>
+            <div style="font-size:13px; color:var(--text2); line-height:1.6">Если настроен автозапуск — каждое утро в 06:00. Данные за вчерашний день появятся утром. Если нужно обновить прямо сейчас — попросите таргетолога запустить синхронизацию вручную.</div>
+          </div>
+
+          <div class="card" style="margin-bottom:10px; padding:16px">
+            <div style="font-weight:500; margin-bottom:6px">Можно ли использовать AmoCRM вместо Битрикс?</div>
+            <div style="font-size:13px; color:var(--text2); line-height:1.6">Да. Схема та же — нужна выгрузка сделок с UTM-метками в Google Таблицу. Выберите AmoCRM при настройке проекта.</div>
+          </div>
+
+          <div class="card" style="padding:16px">
+            <div style="font-weight:500; margin-bottom:6px">Что такое квалифицированный лид?</div>
+            <div style="font-size:13px; color:var(--text2); line-height:1.6">Это человек который проявил реальный интерес к покупке — прошёл первичный отбор менеджером по продажам. В разных компаниях это определяется по-разному: по значению в специальном поле (BBB, A, B), по стадии воронки, или по системе оценки ABCD. Вы настраиваете правила квалификации при создании проекта.</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- MODALS -->
+
+
+<!-- Admin password modal -->
+<div id="adminPassModal" class="modal-overlay">
+  <div class="modal" style="width:360px">
+    <div class="modal-title">Доступ администратора</div>
+    <div class="field"><label>Пароль</label><input type="password" id="adminPassInput" placeholder="••••••••" onkeydown="if(event.key==='Enter') checkAdminPass()"></div>
+    <div id="adminPassError" class="alert alert-error" style="display:none">Неверный пароль</div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('adminPassModal')">Отмена</button>
+      <button class="btn btn-primary" onclick="checkAdminPass()">Войти</button>
+    </div>
+  </div>
+</div>
+
+<!-- Token modal -->
+<div id="tokenModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-title">Обновить Access Token</div>
+    <div class="field"><label>Новый токен</label><textarea id="newTokenInput" placeholder="EAAOo..." rows="4"></textarea></div>
+    <div id="tokenError" class="alert alert-error" style="display:none"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('tokenModal')">Отмена</button>
+      <button class="btn btn-primary" onclick="saveToken()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- Project modal -->
+<div id="projectModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-title" id="projectModalTitle">Новый проект</div>
+    <div class="field"><label>Название проекта / клиента</label><input type="text" id="projectName" placeholder="Yves Ponroy Kazakhstan"></div>
+    <div class="field">
+      <label>Рекламные кабинеты</label>
+      <div style="font-size:12px; color:var(--text3); margin-bottom:8px">Введите ID кабинета (например act_1092373316073604) и нажмите Enter или +</div>
+      <div style="display:flex; gap:8px">
+        <input type="text" id="newAccountInput" placeholder="act_XXXXXXXXXXXXXXX" style="flex:1" onkeydown="if(event.key==='Enter') addAccount()">
+        <button class="btn btn-ghost" onclick="addAccount()">+</button>
+      </div>
+      <div class="account-chips" id="accountChips"></div>
+    </div>
+    <div class="field"><label>Описание / заметки</label><textarea id="projectNotes" placeholder="Необязательно"></textarea></div>
+
+    <hr class="divider">
+    <div style="font-size:13px; font-weight:600; color:var(--text); margin-bottom:12px">Сквозная аналитика (необязательно)</div>
+
+    <div class="field">
+      <label>CRM система</label>
+      <select id="projectCrmType" onchange="toggleCrmFields()">
+        <option value="">Не используется</option>
+        <option value="bitrix">Битрикс24</option>
+        <option value="amo">AmoCRM</option>
+      </select>
+    </div>
+
+    <div id="crmFields" style="display:none">
+      <div class="field">
+        <label>ID Google таблицы со сквозной аналитикой</label>
+        <input type="text" id="projectSpreadsheetId" placeholder="1BNwd41QX8b3_dYXjjoDK9k9g4U6K8tmAbEs_2ulmdps">
+        <div style="font-size:11px; color:var(--text3); margin-top:4px">Возьмите из URL таблицы: docs.google.com/spreadsheets/d/<b>ID</b>/edit</div>
+      </div>
+      <div class="grid-2">
+        <div class="field">
+          <label>Лист с данными CRM</label>
+          <input type="text" id="projectBitrixSheet" placeholder="Bitrix">
+        </div>
+        <div class="field">
+          <label>Лист с данными Facebook</label>
+          <input type="text" id="projectFbSheet" placeholder="Facebook 2025">
+        </div>
+      </div>
+      <div class="field">
+        <label>Метод квалификации</label>
+        <select id="projectQualMethod">
+          <option value="value">По значению в колонке (BBB, A, B...)</option>
+          <option value="stage">По стадии сделки</option>
+          <option value="abcd">По системе ABCD (A и B = квал)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Значения квалифицированного лида</label>
+        <input type="text" id="projectQualValues" placeholder="BBB, A, B">
+        <div style="font-size:11px; color:var(--text3); margin-top:4px">Через запятую. Например: BBB или A, B</div>
+      </div>
+      <div class="alert alert-info" style="margin-top:4px">
+        После сохранения проекта вы получите инструкцию по настройке скрипта синхронизации.
+      </div>
+      <div id="crmGuideHint" style="display:none; align-items:center; gap:10px; margin-top:8px; padding:10px 14px; background:rgba(30,80,200,0.06); border:1px solid rgba(30,80,200,0.2); border-radius:6px; font-size:13px; cursor:pointer" onclick="closeModal('projectModal'); showPage('guide')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+        <span style="color:var(--accent); font-weight:500">Открыть подробную инструкцию по подключению CRM →</span>
+      </div>
+    </div>
+
+    <div id="projectError" class="alert alert-error" style="display:none"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('projectModal')">Отмена</button>
+      <button class="btn btn-primary" onclick="saveProject()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- PDF options modal -->
+<div id="pdfModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-title">Настройки PDF отчёта</div>
+    <div style="font-size:13px; color:var(--text2); margin-bottom:16px">Выберите разделы для включения в отчёт клиенту:</div>
+    <div class="checkbox-group" id="pdfSections">
+      <label class="checkbox-item"><input type="checkbox" id="pdf-metrics" checked> <span>Сводные метрики (бюджет, лиды, CPL)</span></label>
+      <label class="checkbox-item"><input type="checkbox" id="pdf-campaigns" checked> <span>Статистика по кампаниям</span></label>
+      <label class="checkbox-item"><input type="checkbox" id="pdf-creatives" checked> <span>Статистика по креативам</span></label>
+      <label class="checkbox-item"><input type="checkbox" id="pdf-chart"> <span>Динамика по дням</span></label>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('pdfModal')">Отмена</button>
+      <button class="btn btn-primary" onclick="doPrint()">Печать / PDF</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- Lightbox -->
+<div id="lightboxOverlay" class="lightbox-overlay" onclick="closeLightbox(event)">
+  <span class="lightbox-close" onclick="closeLightbox()">×</span>
+  <img id="lightboxImg" class="lightbox-img" src="" alt="">
+  <div id="lightboxName" class="lightbox-name"></div>
+</div>
+
+<script>
+// ─── SUPABASE CONFIG ───────────────────────────────────
+// Замените на свои данные из Supabase проекта
+const SUPABASE_URL = 'https://fbjvlgtfaecxzdmrnaem.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZianZsZ3RmYWVjeHpkbXJuYWVtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY5OTE1MDQsImV4cCI6MjA5MjU2NzUwNH0._pGQQPdIQBqScSGbpMPGGm7pQPYkW2MbenKibTXkfAM';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ─── STATE ─────────────────────────────────────────────
+let currentUser = null;
+let currentProject = null;
+let settings = {};
+let projects = [];
+let pendingAccounts = [];
+let editingProjectId = null;
+let goalsData = {}; // campaignId → goal type
+
+const GOAL_TYPES = [
+  { value: 'MESSAGES',   label: 'Переписки (WhatsApp/Messenger)' },
+  { value: 'LEAD_FORM',  label: 'Лид-форма Facebook' },
+  { value: 'PIXEL_LEAD', label: 'Пиксельное событие (Lead)' },
+  { value: 'CLICKS',     label: 'Клики по ссылке' },
+  { value: 'REACH',      label: 'Охват / Просмотры (не считать лиды)' },
+];
+
+const ACTION_MAP = {
+  'MESSAGES':   'onsite_conversion.messaging_conversation_started_7d',
+  'LEAD_FORM':  'lead',
+  'PIXEL_LEAD': 'offsite_conversion.fb_pixel_lead',
+  'CLICKS':     'link_click',
+  'REACH':      null,
+};
+
+// ─── AUTH ──────────────────────────────────────────────
+async function initApp() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) {
+    currentUser = session.user;
+    showApp();
+  }
+  sb.auth.onAuthStateChange((_event, session) => {
+    if (session) { currentUser = session.user; showApp(); }
+    else { currentUser = null; showAuth(); }
+  });
+}
+
+async function login() {
+  const email = document.getElementById('authEmail').value.trim();
+  const pass = document.getElementById('authPassword').value;
+  const err = document.getElementById('authError');
+  err.style.display = 'none';
+  const { error } = await sb.auth.signInWithPassword({ email, password: pass });
+  if (error) { err.textContent = error.message; err.style.display = 'block'; }
+}
+
+async function showRegister() {
+  const email = document.getElementById('authEmail').value.trim();
+  const pass = document.getElementById('authPassword').value;
+  if (!email || !pass) { alert('Введите email и пароль'); return; }
+  const { error } = await sb.auth.signUp({ email, password: pass });
+  if (error) { document.getElementById('authError').textContent = error.message; document.getElementById('authError').style.display = 'block'; }
+  else alert('Регистрация успешна, войдите с теми же данными.');
+}
+
+async function logout() {
+  await sb.auth.signOut();
+  showAuth();
+}
+
+function showAuth() {
+  document.getElementById('authScreen').style.display = 'flex';
+  document.getElementById('appScreen').style.display = 'none';
+}
+
+async function showApp() {
+  document.getElementById('authScreen').style.display = 'none';
+  document.getElementById('appScreen').style.display = 'flex';
+  const emailShort = currentUser.email.split('@')[0];
+  document.getElementById('userAvatar').textContent = emailShort.slice(0,2).toUpperCase();
+  document.getElementById('userName').textContent = emailShort;
+  document.getElementById('userEmail').textContent = currentUser.email;
+  await loadSettings();
+  await loadProjects();
+  showPage('weekly');
+  initMonthSelector();
+}
+
+// ─── NAVIGATION ────────────────────────────────────────
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const pageEl = document.getElementById('page-' + name);
+  if (pageEl) pageEl.classList.add('active');
+  const items = document.querySelectorAll('.nav-item');
+  const map = { weekly: 0, monthly: 1, yearly: 2, projects: 3, goals: 4, settings: 5, help: 6, guide: 7 };
+  if (items[map[name]]) items[map[name]].classList.add('active');
+  if (name === 'goals') {
+    initGoalsProjectSelect();
+    if (currentProject) {
+      const sel = document.getElementById('goalsProjectSelect');
+      if (sel && !sel.value) sel.value = currentProject.id;
+    }
+  }
+  if (name === 'projects') renderProjectsList();
+  updateMobileNav(name);
+}
+
+// ─── SETTINGS ──────────────────────────────────────────
+async function loadSettings() {
+  const { data } = await sb.from('settings').select('*').eq('user_id', currentUser.id).single();
+  settings = data || {};
+  const tv = document.getElementById('tokenDisplay');
+  if (settings.fb_token) {
+    tv.textContent = settings.fb_token.slice(0, 20) + '...' + settings.fb_token.slice(-10);
+    document.getElementById('tokenStatus').textContent = 'Задан';
+    document.getElementById('tokenStatus').className = 'badge badge-green';
+  }
+  if (settings.api_version) document.getElementById('apiVersionSelect').value = settings.api_version;
+  if (settings.data_start) document.getElementById('dataStartSelect').value = settings.data_start;
+}
+
+async function saveSetting(key, value) {
+  settings[key] = value;
+  await sb.from('settings').upsert({ user_id: currentUser.id, [key]: value });
+}
+
+async function saveToken() {
+  const token = document.getElementById('newTokenInput').value.trim();
+  if (!token) return;
+  const err = document.getElementById('tokenError');
+  err.style.display = 'none';
+  const test = await fetch(`https://graph.facebook.com/${settings.api_version || 'v23.0'}/me?access_token=${token}`);
+  const json = await test.json();
+  if (json.error) { err.textContent = 'Ошибка токена: ' + json.error.message; err.style.display = 'block'; return; }
+  await sb.from('settings').upsert({ user_id: currentUser.id, fb_token: token });
+  settings.fb_token = token;
+  closeModal('tokenModal');
+  loadSettings();
+}
+
+// ─── PROJECTS ──────────────────────────────────────────
+async function loadProjects() {
+  const { data } = await sb.from('projects').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false });
+  projects = data || [];
+  const sel = document.getElementById('projectSelect');
+  sel.innerHTML = '<option value="">— Выберите проект —</option>';
+  projects.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.id; opt.textContent = p.name;
+    sel.appendChild(opt);
+  });
+  if (currentProject) sel.value = currentProject.id;
+  syncMobileProjectSelect();
+  initGoalsProjectSelect();
+}
+
+function selectProject(id) {
+  currentProject = projects.find(p => p.id === id) || null;
+  // Синхронизируем оба селектора
+  const desk = document.getElementById('projectSelect');
+  const mob  = document.getElementById('mobileProjectSelect');
+  if (desk && desk.value !== id) desk.value = id;
+  if (mob  && mob.value  !== id) mob.value  = id;
+  const label = document.getElementById('mobileProjectLabel');
+  if (label) label.textContent = currentProject ? currentProject.name : 'Выберите проект';
+  if (currentProject) {
+    document.getElementById('weeklyContent').innerHTML = '<div class="empty"><div class="empty-icon">📊</div><div class="empty-title">Нажмите «Обновить» для загрузки</div></div>';
+    document.getElementById('monthlyContent').innerHTML = '<div class="empty"><div class="empty-icon">📈</div><div class="empty-title">Нажмите «Загрузить»</div></div>';
+    document.getElementById('yearlyContent').innerHTML = '<div class="empty"><div class="empty-icon">📅</div><div class="empty-title">Нажмите «Загрузить»</div></div>';
+  }
+}
+
+function toggleCrmFields() {
+  const type = document.getElementById('projectCrmType').value;
+  document.getElementById('crmFields').style.display = type ? 'block' : 'none';
+  if (type) {
+    // Показываем подсказку со ссылкой на инструкцию
+    document.getElementById('crmGuideHint').style.display = 'flex';
+  } else {
+    document.getElementById('crmGuideHint').style.display = 'none';
+  }
+}
+
+async function saveProject() {
+  const name    = document.getElementById('projectName').value.trim();
+  const notes   = document.getElementById('projectNotes').value.trim();
+  const crmType = document.getElementById('projectCrmType').value;
+  const err     = document.getElementById('projectError');
+  err.style.display = 'none';
+
+  if (!name) { err.textContent = 'Введите название проекта'; err.style.display = 'block'; return; }
+  if (pendingAccounts.length === 0) { err.textContent = 'Добавьте хотя бы один рекламный кабинет'; err.style.display = 'block'; return; }
+
+  const payload = { user_id: currentUser.id, name, notes, accounts: pendingAccounts };
+  let projectId = editingProjectId;
+  let error;
+
+  if (editingProjectId) {
+    const res = await sb.from('projects').update(payload).eq('id', editingProjectId);
+    error = res.error;
+  } else {
+    const res = await sb.from('projects').insert(payload).select('id').single();
+    error = res.error;
+    if (!error) projectId = res.data.id;
+  }
+  if (error) { err.textContent = error.message; err.style.display = 'block'; return; }
+
+  // Сохраняем CRM настройки если заданы
+  if (crmType && projectId) {
+    const qualValues = (document.getElementById('projectQualValues').value || '')
+      .split(',').map(v => v.trim()).filter(Boolean);
+
+    const crmPayload = {
+      project_id:        projectId,
+      crm_type:          crmType,
+      spreadsheet_id:    document.getElementById('projectSpreadsheetId').value.trim(),
+      bitrix_sheet_name: document.getElementById('projectBitrixSheet').value.trim(),
+      qual_method:       document.getElementById('projectQualMethod').value,
+      qual_values:       qualValues
+    };
+    await sb.from('project_crm_settings').upsert(crmPayload);
+  }
+
+  closeModal('projectModal');
+  await loadProjects();
+  renderProjectsList();
+
+  // Показываем инструкцию по настройке GAS если CRM задана
+  if (crmType && projectId) {
+    setTimeout(() => showCrmInstruction(projectId, name, crmType), 300);
+  }
+}
+
+function showCrmInstruction(projectId, projectName, crmType) {
+  const crmName = crmType === 'bitrix' ? 'Битрикс24' : 'AmoCRM';
+  const spreadsheetId = document.getElementById('projectSpreadsheetId')?.value?.trim() || 'YOUR_SPREADSHEET_ID';
+  const bitrixSheet = document.getElementById('projectBitrixSheet')?.value?.trim() || 'Bitrix';
+  const fbSheet = document.getElementById('projectFbSheet')?.value?.trim() || 'Facebook 2025';
+  const qualValues = document.getElementById('projectQualValues')?.value?.trim() || 'BBB';
+
+  const instruction = `Проект "${projectName}" с CRM (${crmName}) сохранён.
+
+Для синхронизации CRM-данных:
+
+1. Откройте Google Apps Script в вашей таблице
+2. Создайте новый файл crm_sync.gs
+3. В массиве CRM_PROJECTS добавьте:
+   {
+     projectId: '${projectId}',
+     spreadsheetId: '${spreadsheetId}',
+     bitrixSheet: '${bitrixSheet}',
+     fbSheet: '${fbSheet}',
+     qualification: {
+       method: 'value',
+       qualValues: ['${qualValues.split(',').map(v=>v.trim()).join("', '")}']
+     },
+     sourceFilter: 'fb'
+   }
+
+4. Запустите RUN_SYNC_CRM() вручную для проверки
+5. Добавьте триггер: ежедневно в 06:00`;
+
+  alert(instruction);
+}
+
+function renderProjectsList() {
+  const el = document.getElementById('projectsList');
+  if (!projects.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">📁</div><div class="empty-title">Нет проектов</div><div class="empty-sub">Создайте первый проект нажав «Новый проект»</div></div>';
+    return;
+  }
+  el.innerHTML = projects.map(p => `
+    <div class="card" style="margin-bottom:12px">
+      <div class="list-item" style="padding:0; border:none">
+        <div class="list-item-info">
+          <div class="list-item-title">${p.name}</div>
+          <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:6px">
+            ${(p.accounts || []).map(a => `<span class="tag">${a}</span>`).join('')}
+          </div>
+          ${p.notes ? `<div class="list-item-sub" style="margin-top:6px">${p.notes}</div>` : ''}
+        </div>
+        <div class="list-item-actions">
+          <button class="btn btn-ghost btn-sm" onclick="editProject('${p.id}')">Изменить</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteProject('${p.id}')">Удалить</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function editProject(id) {
+  const p = projects.find(x => x.id === id);
+  if (!p) return;
+  editingProjectId = id;
+  document.getElementById('projectModalTitle').textContent = 'Редактировать проект';
+  document.getElementById('projectName').value = p.name;
+  document.getElementById('projectNotes').value = p.notes || '';
+  pendingAccounts = [...(p.accounts || [])];
+  renderAccountChips();
+  openModal('projectModal');
+}
+
+async function deleteProject(id) {
+  if (!confirm('Удалить проект? Это также удалит все цели кампаний.')) return;
+  await sb.from('projects').delete().eq('id', id);
+  await loadProjects();
+  renderProjectsList();
+}
+
+function addAccount() {
+  const input = document.getElementById('newAccountInput');
+  let val = input.value.trim();
+  if (!val) return;
+  if (!val.startsWith('act_')) val = 'act_' + val;
+  if (!pendingAccounts.includes(val)) { pendingAccounts.push(val); renderAccountChips(); }
+  input.value = '';
+}
+
+function removeAccount(acc) {
+  pendingAccounts = pendingAccounts.filter(a => a !== acc);
+  renderAccountChips();
+}
+
+function renderAccountChips() {
+  document.getElementById('accountChips').innerHTML = pendingAccounts.map(a =>
+    `<div class="account-chip">${a}<span class="account-chip-remove" onclick="removeAccount('${a}')">×</span></div>`
+  ).join('');
+}
+
+// ─── CAMPAIGN GOALS ────────────────────────────────────
+async function loadCampaigns() {
+  if (!currentProject) { return; }
+  document.getElementById('goalsList').innerHTML = '<div class="loading"><div class="spinner"></div>Загружаем кампании...</div>';
+  const token = settings.fb_token;
+  const apiV  = settings.api_version || 'v23.0';
+  if (!token) { document.getElementById('goalsList').innerHTML = '<div class="alert alert-error">Токен не задан. Перейдите в Настройки.</div>'; return; }
+
+  const accounts = currentProject.accounts || [];
+  let allCampaigns = [];
+
+  for (const acc of accounts) {
+    try {
+      const r = await fetch(`https://graph.facebook.com/${apiV}/${acc}/campaigns?fields=id,name,objective,effective_status&limit=100&access_token=${token}`);
+      const j = await r.json();
+      if (j.data) allCampaigns.push(...j.data.map(c => ({ ...c, account: acc })));
+    } catch(e) {}
+  }
+
+  // Load saved goals
+  const { data: saved } = await sb.from('campaign_goals')
+    .select('*').eq('project_id', currentProject.id);
+  goalsData = {};
+  (saved || []).forEach(g => { goalsData[g.campaign_id] = g.goal_type; });
+
+  if (!allCampaigns.length) {
+    document.getElementById('goalsList').innerHTML = '<div class="empty"><div class="empty-icon">🎯</div><div class="empty-title">Кампании не найдены</div></div>';
+    return;
+  }
+
+  window._campaignsForGoals = allCampaigns;
+  window._allCampaignsForGoals = allCampaigns; // полный список для фильтрации
+  document.getElementById('goalsToolbar').style.display = 'block';
+  document.getElementById('goalsInfo').style.display = 'none';
+  renderGoalsTable(allCampaigns);
+}
+
+async function saveGoals() {
+  if (!currentProject || !window._campaignsForGoals) return;
+  const upserts = window._campaignsForGoals.map(c => ({
+    project_id: currentProject.id,
+    campaign_id: c.id,
+    campaign_name: c.name,
+    goal_type: document.getElementById('goal-' + c.id)?.value || null,
+  })).filter(g => g.goal_type);
+
+  await sb.from('campaign_goals').delete().eq('project_id', currentProject.id);
+  if (upserts.length) await sb.from('campaign_goals').insert(upserts);
+  alert('Цели сохранены: ' + upserts.length + ' кампаний');
+}
+
+// ─── FB API HELPERS ────────────────────────────────────
+async function fbFetch(path) {
+  const token = settings.fb_token;
+  const apiV  = settings.api_version || 'v23.0';
+  if (!token) throw new Error('Токен не задан');
+  const url = `https://graph.facebook.com/${apiV}/${path}&access_token=${token}`;
+  const r = await fetch(url);
+  const j = await r.json();
+  if (j.error) throw new Error(j.error.message);
+  return j;
+}
+
+async function fbPaginate(path) {
+  let results = [];
+  let json = await fbFetch(path);
+  results.push(...(json.data || []));
+  while (json.paging && json.paging.next) {
+    const r = await fetch(json.paging.next);
+    json = await r.json();
+    if (json.error) break;
+    results.push(...(json.data || []));
+  }
+  return results;
+}
+
+function getDateRange(type) {
+  const now = new Date();
+  const tz = 'Asia/Almaty';
+  if (type === 'week') {
+    const end = new Date(now); end.setDate(end.getDate() - 1);
+    const start = new Date(end); start.setDate(start.getDate() - 6);
+    return { since: fmt(start), until: fmt(end) };
+  }
+  if (type === 'month') {
+    const sel = document.getElementById('monthlyMonthSelect').value;
+    const [year, month] = sel.split('-');
+    const start = new Date(year, month - 1, 1);
+    const end = new Date(year, month, 0);
+    return { since: fmt(start), until: fmt(end) };
+  }
+  if (type === 'year') {
+    const start = new Date(now.getFullYear(), 0, 1);
+    const end = new Date(now); end.setDate(end.getDate() - 1);
+    return { since: fmt(start), until: fmt(end) };
+  }
+}
+
+function fmt(d) {
+  return d.toISOString().split('T')[0];
+}
+
+function getResults(actions, goalType) {
+  if (!actions || !goalType) return 0;
+  const actionType = ACTION_MAP[goalType];
+  if (!actionType) return 0;
+  const a = actions.find(x => x.action_type === actionType);
+  return a ? parseInt(a.value) || 0 : 0;
+}
+
+function cpl(spend, results) {
+  if (!results) return '—';
+  return '$' + (spend / results).toFixed(2);
+}
+
+
+
+// ─── GOALS PROJECT SELECTOR ────────────────────────────
+function initGoalsProjectSelect() {
+  const sel = document.getElementById('goalsProjectSelect');
+  if (!sel) return;
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">— Выберите проект —</option>';
+  projects.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.id;
+    opt.textContent = p.name;
+    sel.appendChild(opt);
+  });
+  // Восстанавливаем выбор если был
+  if (prev) sel.value = prev;
+  // По умолчанию — текущий проект из бокового меню
+  else if (currentProject) sel.value = currentProject.id;
+}
+
+function onGoalsProjectChange(projectId) {
+  const project = projects.find(p => p.id === projectId);
+  const hint = document.getElementById('goalsProjectHint');
+
+  if (!project) {
+    hint.textContent = 'Выберите проект чтобы увидеть его кампании';
+    document.getElementById('goalsList').innerHTML = '<div class="empty"><div class="empty-icon">🎯</div><div class="empty-title">Выберите проект</div></div>';
+    document.getElementById('goalsToolbar').style.display = 'none';
+    document.getElementById('goalsInfo').style.display = 'block';
+    return;
+  }
+
+  hint.textContent = (project.accounts || []).join(', ');
+
+  // Временно переключаем currentProject для loadCampaigns
+  const savedProject = currentProject;
+  currentProject = project;
+  loadCampaigns().then(() => {
+    // Не восстанавливаем — пусть цели сохраняются для этого проекта
+  });
+}
+
+// ─── GOALS TABLE ───────────────────────────────────────
+function renderGoalsTable(campaigns) {
+  window._campaignsForGoals = campaigns;
+  const el = document.getElementById('goalsList');
+
+  if (!campaigns.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">🎯</div><div class="empty-title">Нет кампаний по фильтру</div></div>';
+    return;
+  }
+
+  el.innerHTML = `
+    <div class="card">
+      <table>
+        <thead><tr>
+          <th style="width:32px"></th>
+          <th>Кампания</th>
+          <th>Аккаунт</th>
+          <th>Статус</th>
+          <th style="min-width:220px">Тип результата</th>
+        </tr></thead>
+        <tbody>
+          ${campaigns.map(c => `
+            <tr id="row-${c.id}" data-status="${c.effective_status}" data-goal="${goalsData[c.id] || ''}">
+              <td>
+                <input type="checkbox" class="campaign-checkbox" data-id="${c.id}"
+                  style="width:15px;height:15px;accent-color:var(--accent);cursor:pointer"
+                  onchange="updateSelectedCount()">
+              </td>
+              <td>
+                <div style="font-weight:500; font-size:13px">${c.name}</div>
+                <div style="font-size:11px; color:var(--text3); font-family:var(--mono)">${c.id}</div>
+              </td>
+              <td><span class="tag" style="font-size:11px">${c.account}</span></td>
+              <td><span class="badge ${c.effective_status === 'ACTIVE' ? 'badge-green' : 'badge-gray'}">${c.effective_status}</span></td>
+              <td>
+                <select id="goal-${c.id}" onchange="updateRowGoalData('${c.id}', this.value)"
+                  style="width:100%; background:var(--bg3); border:1px solid var(--border); border-radius:4px; padding:5px 8px; color:var(--text); font-family:var(--font); font-size:12px">
+                  <option value="">— не задано —</option>
+                  ${GOAL_TYPES.map(g => `<option value="${g.value}" ${goalsData[c.id] === g.value ? 'selected' : ''}>${g.label}</option>`).join('')}
+                </select>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+  updateSelectedCount();
+}
+
+function updateRowGoalData(campaignId, value) {
+  // Обновляем data-goal на строке для фильтрации
+  const row = document.getElementById('row-' + campaignId);
+  if (row) row.setAttribute('data-goal', value);
+  goalsData[campaignId] = value;
+}
+
+function toggleSelectAll(checked) {
+  document.querySelectorAll('.campaign-checkbox').forEach(cb => cb.checked = checked);
+  updateSelectedCount();
+}
+
+function updateSelectedCount() {
+  const checked = document.querySelectorAll('.campaign-checkbox:checked').length;
+  const total   = document.querySelectorAll('.campaign-checkbox').length;
+  document.getElementById('selectedCount').textContent = checked + ' из ' + total + ' выбрано';
+  document.getElementById('selectAllCampaigns').checked = checked === total && total > 0;
+  document.getElementById('selectAllCampaigns').indeterminate = checked > 0 && checked < total;
+}
+
+function applyBulkGoal() {
+  const goalType = document.getElementById('bulkGoalType').value;
+  if (!goalType) { alert('Выберите тип результата'); return; }
+
+  const checked = document.querySelectorAll('.campaign-checkbox:checked');
+  if (!checked.length) { alert('Выберите хотя бы одну кампанию'); return; }
+
+  checked.forEach(cb => {
+    const id = cb.getAttribute('data-id');
+    const sel = document.getElementById('goal-' + id);
+    if (sel) { sel.value = goalType; updateRowGoalData(id, goalType); }
+  });
+
+  // Снимаем все чекбоксы
+  document.querySelectorAll('.campaign-checkbox').forEach(cb => cb.checked = false);
+  document.getElementById('selectAllCampaigns').checked = false;
+  updateSelectedCount();
+
+  const goalLabel = GOAL_TYPES.find(g => g.value === goalType)?.label || goalType;
+  alert('Готово: ' + checked.length + ' кампаний → «' + goalLabel + '»');
+}
+
+function filterGoalsByStatus() {
+  const filter = document.getElementById('goalsStatusFilter').value;
+  const all    = window._allCampaignsForGoals || [];
+
+  let filtered;
+  if (!filter) {
+    filtered = all;
+  } else if (filter === 'unset') {
+    filtered = all.filter(c => !goalsData[c.id]);
+  } else {
+    filtered = all.filter(c => c.effective_status === filter);
+  }
+
+  renderGoalsTable(filtered);
+}
+
+// ─── LOAD GOALS MAP ────────────────────────────────────
+async function getGoalsMap() {
+  if (!currentProject) return {};
+  const { data } = await sb.from('campaign_goals').select('*').eq('project_id', currentProject.id);
+  const map = {};
+  (data || []).forEach(g => { map[g.campaign_id] = g.goal_type; });
+  return map;
+}
+
+// ─── WEEKLY REPORT ─────────────────────────────────────
+async function loadWeeklyReport() {
+  if (!currentProject) { alert('Выберите проект'); return; }
+  if (!settings.fb_token) { alert('Задайте токен Facebook в Настройках'); return; }
+
+  const el = document.getElementById('weeklyContent');
+  el.innerHTML = '<div class="loading"><div class="spinner"></div>Загружаем данные из Facebook...</div>';
+
+  try {
+    const range = getWeeklyDateRange();
+    if (!range) return;
+    const { since, until } = range;
+    document.getElementById('weeklyPeriodLabel').textContent = `${since} — ${until}`;
+
+    // Предыдущий аналогичный период для сравнения
+    const days = Math.round((new Date(until) - new Date(since)) / 86400000) + 1;
+    const prevUntil = new Date(since); prevUntil.setDate(prevUntil.getDate() - 1);
+    const prevSince = new Date(prevUntil); prevSince.setDate(prevSince.getDate() - days + 1);
+    const prevRange = { since: fmt(prevSince), until: fmt(prevUntil) };
+
+    const goalsMap = await getGoalsMap();
+    const accounts = currentProject.accounts || [];
+
+    let adRows = [], campaignRows = [], prevCampRows = [];
+
+    for (const acc of accounts) {
+      const timeRange     = encodeURIComponent(JSON.stringify({ since, until }));
+      const prevTimeRange = encodeURIComponent(JSON.stringify(prevRange));
+      const fields = 'ad_id,ad_name,adset_id,adset_name,campaign_id,campaign_name,spend,impressions,actions';
+      const campFields = 'campaign_id,campaign_name,spend,impressions,actions';
+
+      const [adIns, campIns, prevCampIns] = await Promise.all([
+        fbPaginate(`${acc}/insights?fields=${fields}&level=ad&time_range=${timeRange}&limit=500`),
+        fbPaginate(`${acc}/insights?fields=${campFields}&level=campaign&time_range=${timeRange}&limit=200`),
+        fbPaginate(`${acc}/insights?fields=${campFields}&level=campaign&time_range=${prevTimeRange}&limit=200`)
+      ]);
+      adRows.push(...adIns);
+      campaignRows.push(...campIns);
+      prevCampRows.push(...prevCampIns);
+    }
+
+    // Creatives
+    const { data: creatives } = await sb.from('creatives_index')
+      .select('ad_id,image_url')
+      .in('ad_id', adRows.map(r => r.ad_id));
+    const creativesMap = {};
+    (creatives || []).forEach(c => { creativesMap[c.ad_id] = c.image_url; });
+
+    // CRM данные — загружаем если настроена CRM
+    const { data: crmRows } = await sb.from('crm_data')
+      .select('date,campaign_name,adset_name,ad_name,leads,qualified_leads,deals,revenue')
+      .eq('project_id', currentProject.id)
+      .gte('date', since)
+      .lte('date', until);
+    const crmMap = {}; // key: campaign_name|adset_name|ad_name → {leads, qualified_leads}
+    for (const r of (crmRows || [])) {
+      const key = `${r.campaign_name}|${r.adset_name}|${r.ad_name}`;
+      if (!crmMap[key]) crmMap[key] = { leads: 0, qualifiedLeads: 0, deals: 0, revenue: 0 };
+      crmMap[key].leads          += r.leads || 0;
+      crmMap[key].qualifiedLeads += r.qualified_leads || 0;
+      crmMap[key].deals          += r.deals || 0;
+      crmMap[key].revenue        += r.revenue || 0;
+    }
+    // hasCrm = true если для проекта настроена CRM (даже если данных ещё нет)
+    const { data: crmSettings } = await sb.from('project_crm_settings')
+      .select('crm_type')
+      .eq('project_id', currentProject.id)
+      .single();
+    const hasCrm = !!(crmSettings && crmSettings.crm_type);
+
+    // Aggregate ads
+    const adAgg = {};
+    for (const r of adRows) {
+      const key = r.ad_id;
+      if (!adAgg[key]) {
+        const crmKey = `${r.campaign_name}|${r.adset_name}|${r.ad_name}`;
+        const crm = crmMap[crmKey] || { leads: 0, qualifiedLeads: 0, deals: 0, revenue: 0 };
+        adAgg[key] = { name: r.ad_name, campaign_id: r.campaign_id, campaign_name: r.campaign_name || '', adset_id: r.adset_id || '', adset_name: r.adset_name || '', spend: 0, results: 0, impressions: 0, imageUrl: creativesMap[r.ad_id] || '', crmLeads: crm.leads, qualifiedLeads: crm.qualifiedLeads, deals: crm.deals, revenue: crm.revenue };
+      }
+      adAgg[key].spend += parseFloat(r.spend || 0);
+      adAgg[key].impressions += parseInt(r.impressions || 0);
+      adAgg[key].results += getResults(r.actions, goalsMap[r.campaign_id]);
+    }
+
+    // Aggregate campaigns (current + prev)
+    const campAgg = {}, prevCampAgg = {};
+    for (const r of campaignRows) {
+      if (!campAgg[r.campaign_id]) campAgg[r.campaign_id] = { name: r.campaign_name, spend: 0, results: 0, impressions: 0 };
+      campAgg[r.campaign_id].spend += parseFloat(r.spend || 0);
+      campAgg[r.campaign_id].impressions += parseInt(r.impressions || 0);
+      campAgg[r.campaign_id].results += getResults(r.actions, goalsMap[r.campaign_id]);
+    }
+    for (const r of prevCampRows) {
+      if (!prevCampAgg[r.campaign_id]) prevCampAgg[r.campaign_id] = { spend: 0, results: 0 };
+      prevCampAgg[r.campaign_id].spend += parseFloat(r.spend || 0);
+      prevCampAgg[r.campaign_id].results += getResults(r.actions, goalsMap[r.campaign_id]);
+    }
+
+    // Save for filters
+    lastWeeklyData = { adAgg, campAgg, prevCampAgg, adRows, since, until, prevRange, hasCrm };
+    populateFilters(adRows);
+    renderWeeklyReport(lastWeeklyData, '', '');
+
+  } catch(e) {
+    document.getElementById('weeklyContent').innerHTML = `<div class="alert alert-error">Ошибка загрузки: ${e.message}</div>`;
+  }
+}
+
+function renderWeeklyReport(data, campFilter, adsetFilter) {
+  const { adAgg, campAgg, prevCampAgg, since, until, prevRange, hasCrm } = data;
+  const el = document.getElementById('weeklyContent');
+
+  let adList = Object.values(adAgg);
+  if (campFilter)  adList = adList.filter(r => r.campaign_id === campFilter);
+  if (adsetFilter) adList = adList.filter(r => r.adset_id === adsetFilter);
+  adList.sort((a, b) => b.spend - a.spend);
+
+  let campList = Object.entries(campAgg).map(([id, c]) => ({ id, ...c }));
+  if (campFilter) campList = campList.filter(c => c.id === campFilter);
+  campList.sort((a, b) => b.spend - a.spend);
+
+  const totalSpend   = adList.reduce((s, r) => s + r.spend, 0);
+  const totalResults = adList.reduce((s, r) => s + r.results, 0);
+  const totalImpressions = adList.reduce((s, r) => s + r.impressions, 0);
+
+  const prevTotalSpend   = Object.values(prevCampAgg).reduce((s, c) => s + c.spend, 0);
+  const prevTotalResults = Object.values(prevCampAgg).reduce((s, c) => s + c.results, 0);
+
+  const maxSpend = Math.max(...adList.map(r => r.spend), 1);
+
+  // TOP-3 by results, TOP-3 by CPL (with results > 0)
+  const top3Results = [...adList].filter(r => r.results > 0).sort((a,b) => b.results - a.results).slice(0,3);
+  const top3Cpl     = [...adList].filter(r => r.results > 0).sort((a,b) => (a.spend/a.results) - (b.spend/b.results)).slice(0,3);
+
+  function delta(curr, prev) {
+    if (!prev) return '';
+    const pct = Math.round((curr - prev) / prev * 100);
+    const sign = pct > 0 ? '+' : '';
+    const cls = pct > 0 ? 'metric-up' : pct < 0 ? 'metric-down' : '';
+    return `<div class="metric-sub ${cls}">${sign}${pct}% vs пред. период</div>`;
+  }
+
+  function topCreativeCard(r, label) {
+    return `<div style="display:flex; align-items:center; gap:10px; padding:10px; background:var(--bg3); border-radius:var(--radius-sm)">
+      <div class="creative-img-wrap" style="width:40px; height:40px; flex-shrink:0">
+        ${r.imageUrl ? `<img style="width:40px;height:40px;object-fit:cover;border-radius:5px;cursor:zoom-in" src="${r.imageUrl}" onclick="openLightbox('${r.imageUrl}','${r.name.replace(/'/g,'')}')">` : '<span style="font-size:10px;color:var(--text3)">нет</span>'}
+      </div>
+      <div style="min-width:0;flex:1">
+        <div style="font-size:11px;color:var(--accent);font-weight:600;margin-bottom:2px">${label}</div>
+        <div style="font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.name}</div>
+        <div style="font-size:11px;color:var(--text2)">${r.results} рез. · ${cpl(r.spend, r.results)}</div>
+      </div>
+    </div>`;
+  }
+
+  el.innerHTML = `
+    <!-- Summary -->
+    <div class="grid-3" style="margin-bottom:24px">
+      <div class="metric">
+        <div class="metric-label">Бюджет за период</div>
+        <div class="metric-value">$${totalSpend.toFixed(0)}</div>
+        ${delta(totalSpend, prevTotalSpend)}
+      </div>
+      <div class="metric">
+        <div class="metric-label">Результатов</div>
+        <div class="metric-value">${totalResults}</div>
+        ${delta(totalResults, prevTotalResults)}
+      </div>
+      <div class="metric">
+        <div class="metric-label">CPL</div>
+        <div class="metric-value">${cpl(totalSpend, totalResults)}</div>
+        <div class="metric-sub" style="color:var(--text3)">${totalImpressions.toLocaleString()} показов</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">Пред. период: ${fmt(new Date(prevRange.since))} — ${fmt(new Date(prevRange.until))}</div>
+      </div>
+    </div>
+
+    ${(top3Results.length > 0) ? `
+    <!-- TOP-3 -->
+    <div class="grid-2" style="margin-bottom:20px">
+      <div class="card">
+        <div class="card-title">🏆 Топ-3 по результатам</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          ${top3Results.map((r,i) => topCreativeCard(r, '#'+(i+1)+' · '+r.results+' результатов')).join('')}
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">💰 Топ-3 по низкому CPL</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          ${top3Cpl.map((r,i) => topCreativeCard(r, '#'+(i+1)+' · CPL '+cpl(r.spend, r.results))).join('')}
+        </div>
+      </div>
+    </div>` : ''}
+
+    <!-- Campaigns -->
+    <div class="card" style="margin-bottom:20px">
+      <div class="section-header"><div class="section-title">По кампаниям</div></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>Кампания</th><th>Бюджет</th><th>vs пред.</th><th>Результаты</th><th>vs пред.</th><th>CPL</th><th class="hide-mobile">Показы</th>
+          </tr></thead>
+          <tbody>
+            ${campList.map(c => {
+              const prev = prevCampAgg[c.id] || { spend: 0, results: 0 };
+              const spendDelta = prev.spend ? Math.round((c.spend - prev.spend)/prev.spend*100) : null;
+              const resDelta   = prev.results ? Math.round((c.results - prev.results)/prev.results*100) : null;
+              const deltaCell = (d) => d === null ? '<td style="color:var(--text3)">—</td>' :
+                `<td style="font-family:var(--mono);color:${d>0?'var(--green)':d<0?'var(--red)':'var(--text3)'}">${d>0?'+':''}${d}%</td>`;
+              return `<tr>
+                <td style="font-weight:500">${c.name}</td>
+                <td style="font-family:var(--mono)">$${c.spend.toFixed(2)}</td>
+                ${deltaCell(spendDelta)}
+                <td style="font-family:var(--mono)">${c.results}</td>
+                ${deltaCell(resDelta)}
+                <td style="font-family:var(--mono)">${cpl(c.spend, c.results)}</td>
+                <td style="font-family:var(--mono);color:var(--text2)">${c.impressions.toLocaleString()}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Creatives -->
+    <div class="card">
+      <div class="section-header">
+        <div class="section-title">По креативам</div>
+        <span class="badge badge-gray">${adList.length} объявлений</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th style="width:64px"></th>
+            <th>Объявление</th>
+            <th>Кампания / группа</th>
+            <th>Бюджет</th>
+            <th>Лиды FB</th>
+            <th>CPL</th>
+            ${hasCrm ? '<th>Квал. лиды</th><th>% квала</th><th>CPL квал.</th>' : ''}
+            <th class="hide-mobile" style="min-width:120px">Эффективность</th>
+          </tr></thead>
+          <tbody>
+            ${adList.map(r => `
+              <tr>
+                <td>
+                  <div class="creative-img-wrap">
+                    ${r.imageUrl ? `<img class="creative-img" src="${r.imageUrl}" onclick="openLightbox('${r.imageUrl}','${r.name.replace(/'/g,'')}')" onerror="this.parentElement.innerHTML='<span style=color:var(--text3);font-size:10px>нет</span>'" loading="lazy" style="cursor:zoom-in">` : '<span style="font-size:10px;color:var(--text3)">нет</span>'}
+                  </div>
+                </td>
+                <td style="max-width:200px">
+                  <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px">${r.name}</div>
+                </td>
+                <td style="max-width:180px">
+                  <div style="font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px">${r.campaign_name}</div>
+                  <div style="font-size:11px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px;margin-top:2px">${r.adset_name}</div>
+                </td>
+                <td style="font-family:var(--mono)">$${r.spend.toFixed(2)}</td>
+                <td style="font-family:var(--mono)">${r.results}</td>
+                <td style="font-family:var(--mono)">${cpl(r.spend, r.results)}</td>
+                ${hasCrm ? `
+                <td style="font-family:var(--mono);color:${r.qualifiedLeads > 0 ? 'var(--green)' : 'var(--text3)'}">${r.qualifiedLeads || '—'}</td>
+                <td style="font-family:var(--mono);color:var(--text2)">${r.qualifiedLeads && r.crmLeads ? Math.round(r.qualifiedLeads/r.crmLeads*100)+'%' : '—'}</td>
+                <td style="font-family:var(--mono)">${r.qualifiedLeads ? '$'+(r.spend/r.qualifiedLeads).toFixed(2) : '—'}</td>
+                ` : ''}
+                <td>
+                  <div class="bar-track" style="width:100px">
+                    <div class="bar-fill" style="width:${Math.round(r.spend/maxSpend*100)}%"></div>
+                  </div>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+// ─── MONTHLY REPORT ────────────────────────────────────
+function initMonthSelector() {
+  const sel = document.getElementById('monthlyMonthSelect');
+  const now = new Date();
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const val = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    const label = d.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' });
+    const opt = document.createElement('option');
+    opt.value = val; opt.textContent = label;
+    sel.appendChild(opt);
+  }
+}
+
+async function loadMonthlyReport() {
+  if (!currentProject || !settings.fb_token) { alert('Выберите проект и задайте токен'); return; }
+  const content = document.getElementById('monthlyContent');
+  content.innerHTML = '<div class="loading"><div class="spinner"></div>Загружаем...</div>';
+
+  try {
+    const { since, until } = getDateRange('month');
+    const goalsMap = await getGoalsMap();
+    const accounts = currentProject.accounts || [];
+    let allRows = [];
+
+    for (const acc of accounts) {
+      const timeRange = encodeURIComponent(JSON.stringify({ since, until }));
+      const fields = 'date_start,campaign_id,campaign_name,spend,impressions,actions';
+      const rows = await fbPaginate(`${acc}/insights?fields=${fields}&level=campaign&time_increment=1&time_range=${timeRange}&limit=500`);
+      allRows.push(...rows);
+    }
+
+    // Group by campaign
+    const campaigns = {};
+    for (const r of allRows) {
+      if (!campaigns[r.campaign_id]) campaigns[r.campaign_id] = { name: r.campaign_name, days: {} };
+      const d = r.date_start;
+      if (!campaigns[r.campaign_id].days[d]) campaigns[r.campaign_id].days[d] = { spend: 0, results: 0 };
+      campaigns[r.campaign_id].days[d].spend += parseFloat(r.spend || 0);
+      const goal = goalsMap[r.campaign_id];
+      campaigns[r.campaign_id].days[d].results += getResults(r.actions, goal);
+    }
+
+    // Build daily totals
+    const campList = Object.entries(campaigns).map(([id, c]) => {
+      const totalSpend = Object.values(c.days).reduce((s, d) => s + d.spend, 0);
+      const totalResults = Object.values(c.days).reduce((s, d) => s + d.results, 0);
+      return { id, name: c.name, days: c.days, totalSpend, totalResults };
+    }).sort((a, b) => b.totalSpend - a.totalSpend);
+
+    const grandSpend = campList.reduce((s, c) => s + c.totalSpend, 0);
+    const grandResults = campList.reduce((s, c) => s + c.totalResults, 0);
+
+    content.innerHTML = `
+      <div class="grid-3" style="margin-bottom:24px">
+        <div class="metric"><div class="metric-label">Бюджет за месяц</div><div class="metric-value">$${grandSpend.toFixed(0)}</div></div>
+        <div class="metric"><div class="metric-label">Результатов</div><div class="metric-value">${grandResults}</div></div>
+        <div class="metric"><div class="metric-label">CPL</div><div class="metric-value">${cpl(grandSpend, grandResults)}</div></div>
+      </div>
+
+      ${campList.map(c => {
+        const days = Object.entries(c.days).sort(([a],[b]) => a.localeCompare(b));
+        return `
+          <div class="card" style="margin-bottom:16px">
+            <div class="section-header">
+              <div class="section-title">${c.name}</div>
+              <div style="display:flex; gap:12px; font-size:12px; color:var(--text2)">
+                <span>$${c.totalSpend.toFixed(2)}</span>
+                <span>${c.totalResults} рез.</span>
+                <span>CPL: ${cpl(c.totalSpend, c.totalResults)}</span>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Дата</th><th>Бюджет</th><th>Результаты</th><th>CPL</th></tr></thead>
+                <tbody>
+                  ${days.map(([date, d]) => `
+                    <tr>
+                      <td style="color:var(--text2);font-size:12px">${date}</td>
+                      <td style="font-family:var(--mono)">$${d.spend.toFixed(2)}</td>
+                      <td style="font-family:var(--mono)">${d.results}</td>
+                      <td style="font-family:var(--mono)">${cpl(d.spend, d.results)}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+      }).join('')}
+    `;
+  } catch(e) {
+    content.innerHTML = `<div class="alert alert-error">Ошибка: ${e.message}</div>`;
+  }
+}
+
+// ─── YEARLY REPORT ─────────────────────────────────────
+async function loadYearlyReport() {
+  if (!currentProject || !settings.fb_token) { alert('Выберите проект и задайте токен'); return; }
+  const content = document.getElementById('yearlyContent');
+  content.innerHTML = '<div class="loading"><div class="spinner"></div>Загружаем...</div>';
+
+  try {
+    const { since, until } = getDateRange('year');
+    const goalsMap = await getGoalsMap();
+    const accounts = currentProject.accounts || [];
+    let allRows = [];
+
+    for (const acc of accounts) {
+      const timeRange = encodeURIComponent(JSON.stringify({ since, until }));
+      const fields = 'date_start,campaign_id,campaign_name,spend,impressions,actions';
+      const rows = await fbPaginate(`${acc}/insights?fields=${fields}&level=campaign&time_increment=monthly&time_range=${timeRange}&limit=500`);
+      allRows.push(...rows);
+    }
+
+    const campaigns = {};
+    for (const r of allRows) {
+      if (!campaigns[r.campaign_id]) campaigns[r.campaign_id] = { name: r.campaign_name, months: {} };
+      const month = r.date_start.slice(0, 7);
+      if (!campaigns[r.campaign_id].months[month]) campaigns[r.campaign_id].months[month] = { spend: 0, results: 0 };
+      campaigns[r.campaign_id].months[month].spend += parseFloat(r.spend || 0);
+      const goal = goalsMap[r.campaign_id];
+      campaigns[r.campaign_id].months[month].results += getResults(r.actions, goal);
+    }
+
+    const campList = Object.entries(campaigns).map(([id, c]) => {
+      const totalSpend = Object.values(c.months).reduce((s, m) => s + m.spend, 0);
+      const totalResults = Object.values(c.months).reduce((s, m) => s + m.results, 0);
+      return { id, name: c.name, months: c.months, totalSpend, totalResults };
+    }).sort((a, b) => b.totalSpend - a.totalSpend);
+
+    const grandSpend = campList.reduce((s, c) => s + c.totalSpend, 0);
+    const grandResults = campList.reduce((s, c) => s + c.totalResults, 0);
+
+    content.innerHTML = `
+      <div class="grid-3" style="margin-bottom:24px">
+        <div class="metric"><div class="metric-label">Бюджет за год</div><div class="metric-value">$${grandSpend.toFixed(0)}</div></div>
+        <div class="metric"><div class="metric-label">Результатов</div><div class="metric-value">${grandResults}</div></div>
+        <div class="metric"><div class="metric-label">Средний CPL</div><div class="metric-value">${cpl(grandSpend, grandResults)}</div></div>
+      </div>
+
+      <div class="card">
+        <div class="section-title" style="margin-bottom:16px">По кампаниям, разбивка по месяцам</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>Кампания</th>
+              ${[...new Set(allRows.map(r => r.date_start.slice(0,7)))].sort().map(m =>
+                `<th style="text-align:right">${m.slice(5)}</th>`
+              ).join('')}
+              <th style="text-align:right">Итого</th>
+              <th style="text-align:right">CPL</th>
+            </tr></thead>
+            <tbody>
+              ${campList.map(c => {
+                const months = [...new Set(allRows.map(r => r.date_start.slice(0,7)))].sort();
+                return `<tr>
+                  <td style="font-weight:500; max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">${c.name}</td>
+                  ${months.map(m => {
+                    const d = c.months[m];
+                    return `<td style="text-align:right; font-family:var(--mono); font-size:12px; color:var(--text2)">${d ? '$'+d.spend.toFixed(0) : '—'}</td>`;
+                  }).join('')}
+                  <td style="text-align:right; font-family:var(--mono); font-weight:500">$${c.totalSpend.toFixed(0)}</td>
+                  <td style="text-align:right; font-family:var(--mono)">${cpl(c.totalSpend, c.totalResults)}</td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  } catch(e) {
+    content.innerHTML = `<div class="alert alert-error">Ошибка: ${e.message}</div>`;
+  }
+}
+
+// ─── PRINT / PDF ───────────────────────────────────────
+function printReport() {
+  openModal('pdfModal');
+}
+
+function doPrint() {
+  closeModal('pdfModal');
+  setTimeout(() => window.print(), 200);
+}
+
+// ─── MODAL HELPERS ─────────────────────────────────────
+function openModal(id) {
+  if (id === 'projectModal') {
+    if (!editingProjectId) {
+      document.getElementById('projectModalTitle').textContent = 'Новый проект';
+      document.getElementById('projectName').value = '';
+      document.getElementById('projectNotes').value = '';
+      pendingAccounts = [];
+      renderAccountChips();
+    }
+  }
+  document.getElementById(id).classList.add('open');
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+  editingProjectId = null;
+}
+
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+});
+
+
+
+// ─── ADMIN PASSWORD ────────────────────────────────────
+function unlockAdmin() {
+  const stored = localStorage.getItem('diskurs_admin_hash');
+  if (!stored) {
+    // Пароль ещё не задан — сразу открываем
+    document.getElementById('adminSection').classList.add('unlocked');
+    document.getElementById('adminLockBtn').style.display = 'none';
+    return;
+  }
+  document.getElementById('adminPassInput').value = '';
+  document.getElementById('adminPassError').style.display = 'none';
+  openModal('adminPassModal');
+}
+
+async function checkAdminPass() {
+  const input = document.getElementById('adminPassInput').value;
+  const stored = localStorage.getItem('diskurs_admin_hash');
+  const hash = await hashString(input);
+  if (hash === stored) {
+    closeModal('adminPassModal');
+    document.getElementById('adminSection').classList.add('unlocked');
+    document.getElementById('adminLockBtn').style.display = 'none';
+  } else {
+    document.getElementById('adminPassError').style.display = 'block';
+  }
+}
+
+async function saveAdminPassword() {
+  const input = document.getElementById('newAdminPass').value;
+  if (!input || input.length < 4) { alert('Минимум 4 символа'); return; }
+  const hash = await hashString(input);
+  localStorage.setItem('diskurs_admin_hash', hash);
+  document.getElementById('newAdminPass').value = '';
+  alert('Пароль администратора сохранён');
+}
+
+async function hashString(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+// ─── FILTERS & CUSTOM PERIOD ───────────────────────────
+let lastWeeklyData = null; // кешируем данные для фильтрации без повторного запроса
+
+function toggleCustomPeriod(page) {
+  const type = document.getElementById(page + 'PeriodType').value;
+  const el = document.getElementById(page + 'CustomPeriod');
+  if (el) el.style.display = type === 'custom' ? 'flex' : 'none';
+}
+
+function getWeeklyDateRange() {
+  const type = document.getElementById('weeklyPeriodType')?.value || 'week';
+  if (type === 'custom') {
+    const from = document.getElementById('weeklyDateFrom').value;
+    const to   = document.getElementById('weeklyDateTo').value;
+    if (!from || !to) { alert('Укажите обе даты'); return null; }
+    return { since: from, until: to };
+  }
+  return getDateRange('week');
+}
+
+function populateFilters(adRows) {
+  const campaigns = [...new Map(adRows.map(r => [r.campaign_id, r.campaign_name])).entries()];
+  const adsets    = [...new Map(adRows.map(r => [r.adset_id, r.adset_name])).entries()];
+
+  const campSel = document.getElementById('filterCampaign');
+  const adsetSel = document.getElementById('filterAdset');
+
+  campSel.innerHTML = '<option value="">Все кампании</option>' +
+    campaigns.map(([id, name]) => `<option value="${id}">${name}</option>`).join('');
+
+  adsetSel.innerHTML = '<option value="">Все группы</option>' +
+    adsets.map(([id, name]) => `<option value="${id}">${name}</option>`).join('');
+}
+
+function applyFilters() {
+  if (!lastWeeklyData) return;
+  const campFilter  = document.getElementById('filterCampaign')?.value || '';
+  const adsetFilter = document.getElementById('filterAdset')?.value || '';
+  renderWeeklyReport(lastWeeklyData, campFilter, adsetFilter);
+}
+
+
+// ─── LIGHTBOX ──────────────────────────────────────────
+function openLightbox(url, name) {
+  document.getElementById('lightboxImg').src = url;
+  document.getElementById('lightboxName').textContent = name || '';
+  document.getElementById('lightboxOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeLightbox(e) {
+  if (e && e.target === document.getElementById('lightboxImg')) return; // клик на саму картинку не закрывает
+  document.getElementById('lightboxOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeLightbox();
+});
+
+
+// ─── MOBILE ────────────────────────────────────────────
+function isMobile() { return window.innerWidth <= 768; }
+
+function initMobile() {
+  if (isMobile()) {
+    document.getElementById('mobileHeader').style.display = 'flex';
+    document.getElementById('mobileNav').style.display = 'flex';
+  }
+}
+
+// Синхронизируем мобильный селектор проектов
+function syncMobileProjectSelect() {
+  const mob = document.getElementById('mobileProjectSelect');
+  if (!mob) return;
+  mob.innerHTML = '<option value="">— Проект —</option>';
+  projects.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.id; opt.textContent = p.name;
+    mob.appendChild(opt);
+  });
+  if (currentProject) {
+    mob.value = currentProject.id;
+    document.getElementById('mobileProjectLabel').textContent = currentProject.name;
+  }
+}
+
+// Мобильная навигация — подсветка активного пункта
+function updateMobileNav(name) {
+  document.querySelectorAll('.mobile-nav-item').forEach(el => el.classList.remove('active'));
+  const mobileMap = { weekly: 0, monthly: 1, yearly: 2, projects: 3, settings: 4 };
+  const idx = mobileMap[name];
+  const items = document.querySelectorAll('.mobile-nav-item');
+  if (idx !== undefined && items[idx]) items[idx].classList.add('active');
+}
+
+window.addEventListener('resize', () => {
+  const header = document.getElementById('mobileHeader');
+  const nav = document.getElementById('mobileNav');
+  if (header) header.style.display = isMobile() ? 'flex' : 'none';
+  if (nav) nav.style.display = isMobile() ? 'flex' : 'none';
+});
+
+// ─── INIT ──────────────────────────────────────────────
+initApp();
+initMobile();
+</script>
+
+<!-- MOBILE HEADER -->
+<div class="mobile-header" id="mobileHeader" style="display:none">
+  <div>
+    <div class="mobile-header-logo">DISKURS · Ads</div>
+    <div class="mobile-header-project" id="mobileProjectLabel">Выберите проект</div>
+  </div>
+  <select id="mobileProjectSelect" style="background:var(--bg3); border:1px solid var(--border); border-radius:6px; padding:6px 10px; color:var(--text); font-family:var(--font); font-size:12px; max-width:140px" onchange="selectProject(this.value); document.getElementById('projectSelect').value=this.value">
+    <option value="">— Проект —</option>
+  </select>
+</div>
+
+<!-- MOBILE BOTTOM NAV -->
+<nav class="mobile-nav" id="mobileNav" style="display:none">
+  <div class="mobile-nav-item" onclick="showPage('weekly')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+    Неделя
+  </div>
+  <div class="mobile-nav-item" onclick="showPage('monthly')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v18h18"/><path d="M7 16l4-4 4 4 4-8"/></svg>
+    Месяц
+  </div>
+  <div class="mobile-nav-item" onclick="showPage('yearly')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+    Год
+  </div>
+  <div class="mobile-nav-item" onclick="showPage('projects')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+    Проекты
+  </div>
+  <div class="mobile-nav-item" onclick="showPage('settings')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 2v2m0 16v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M2 12h2m16 0h2"/></svg>
+    Ещё
+  </div>
+</nav>
+
+</body>
+</html>
